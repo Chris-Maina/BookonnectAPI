@@ -1,0 +1,7 @@
+﻿@BookonnectAPI_HostAddress = http://localhost:5106
+
+GET {{BookonnectAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
