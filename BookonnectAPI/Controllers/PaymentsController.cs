@@ -1,11 +1,9 @@
 using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
 using BookonnectAPI.Data;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using static System.Net.Mime.MediaTypeNames;
+using BookonnectAPI.Lib;
 
 namespace BookonnectAPI.Controllers;
 
@@ -17,18 +15,20 @@ public class PaymentsController : ControllerBase
     private readonly BookonnectContext _context;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PaymentsController> _logger;
+    private readonly IMpesaLibrary _mpesaLibrary;
 
-    public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger)
+    public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger, IMpesaLibrary mpesaLibrary)
     {
         _context = context;
         _context.Database.EnsureCreated();
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _mpesaLibrary = mpesaLibrary;
     }
 
     // Send payment to MPESA to get confirmation
     [HttpPost]
-    public async Task<ActionResult<string>> Post(Payment payment)
+    public async Task<ActionResult<string>> Post(PaymentDTO paymentDTO)
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
@@ -44,12 +44,32 @@ public class PaymentsController : ControllerBase
             return NotFound();
         }
 
-        string response = string.Empty;
         try
         {
-           response = await ConfirmMpesaPayment(payment);
-           Console.WriteLine(response);
-           _logger.LogInformation("Received MPESA confirmation {0}", response);
+            _logger.LogInformation("Fetching MPESA access token");
+            MpesaAuthToken? tokenResponse = await _mpesaLibrary.GetMpesaAuthToken();
+
+            if (tokenResponse == null)
+            {
+                _logger.LogWarning("MPESA access token not found");
+                return NotFound();
+            }
+
+            _logger.LogInformation("Fetching transaction status");
+            TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.GetTransactionStatusResponse(paymentDTO, tokenResponse.AccessToken);
+
+            if (transactionStatusResponse == null)
+            {
+                _logger.LogWarning("Could not find transaction for payment with key {0}", paymentDTO.ID);
+                return NotFound();
+            }
+            if (transactionStatusResponse.ResponseCode != 0)
+            {
+                _logger.LogError("The payment key {0} has the tranaction error {1}", paymentDTO.ID, transactionStatusResponse);
+                return BadRequest();
+            }
+            _logger.LogInformation("Received successfull transaction status {0}", transactionStatusResponse);
+           
         }
         catch(Exception ex)
         {
@@ -57,14 +77,13 @@ public class PaymentsController : ControllerBase
             throw;
         }
 
-        if (string.IsNullOrEmpty(response))
+        var payment = new Payment
         {
-            _logger.LogWarning("Could not find MPESA payment with key {0}", payment.ID);
-            return NotFound();
-        }
-
-        // Serialize response to get datetime and phone number
-        payment.DateTime = DateTime.Now;
+            ID = paymentDTO.ID,
+            Phone = paymentDTO.Phone,
+            UserID = user.ID,
+            DateTime = DateTime.Now
+        };
         _context.Payments.Add(payment);
 
         try
@@ -77,30 +96,5 @@ public class PaymentsController : ControllerBase
             _logger.LogError(ex, "Error saving payment in DB");
             throw;
         }
-    }
-
-
-    private async Task<string> ConfirmMpesaPayment(Payment payment)
-    {
-
-        // construct mpesa request and send it
-        var payload = new
-        {
-            ShortCode = 7845640,
-            CommandID = "CustomerBuyGoodsOnline",
-            Amount = payment.Order.Total,
-            Msisdn = payment.Phone,
-            BillRefNumber = "null",
-        };
-        var paymentJson = new StringContent(
-        JsonSerializer.Serialize(payload),
-        Encoding.UTF8,
-        Application.Json);
-
-        var httpClient = _httpClientFactory.CreateClient("Safaricom");
-        using var response = await httpClient.PostAsync("/mpesa/c2b/v1/simulate", paymentJson);
-
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync();
     }
 }
