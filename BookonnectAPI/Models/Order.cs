@@ -13,18 +13,25 @@ public class Order
 	public float Total { get; set; }
     public OrderStatus Status { get; set; } = OrderStatus.OrderPlaced;
 
+    // Order can have multiple OrderItems
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>(); // Optional collection navigation.
 
-	public int UserID { get; set; } // Required foreign key property
-	public User User { get; set; } = null!; // Required reference navigation. An order must be associated with a customer/user
-	 
     /**
-	 * Optional reference navigations. An order does not need to be associated with Payment, Delivery.
+     * Required foreign key properties and reference navigations 
+     * An order must be associated with a customer/user
+     * An order must be associated with a delivery
+     * 
+     */
+    public int UserID { get; set; }
+	public User User { get; set; } = null!;
+    public int DeliveryID { get; set; }
+    public Delivery Delivery { get; set; } = null!;
+
+    /**
+	 * Optional reference navigations. An order does not need to be associated with Payment.
 	 * Order is related to one Payment, Delivery
-	 * Order can have multiple OrderItems
 	 */
     public Payment? Payment { get; set; }
-    public Delivery? Delivery { get; set; }
 
     public static OrderDTO OrderToDTO(Order order) => new OrderDTO
     {

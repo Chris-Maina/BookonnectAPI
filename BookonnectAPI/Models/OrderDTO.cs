@@ -8,6 +8,7 @@ public class OrderDTO
 	public float Total { get; set; }
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public OrderStatus Status { get; set; }
+    public int DeliveryID { get; set; }
     public ICollection<OrderItemDTO> OrderItems { get; set; } = new List<OrderItemDTO>();
 }
 

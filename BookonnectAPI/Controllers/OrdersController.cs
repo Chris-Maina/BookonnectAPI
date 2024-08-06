@@ -45,6 +45,7 @@ namespace BookonnectAPI.Controllers
             var orders = _context.Orders
                 .Where(ord => ord.UserID == user.ID)
                 .Where(ord => orderIds.Contains(ord.ID))
+                .Include(ord => ord.Delivery)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
                 .ThenInclude(book => book.Image)
@@ -90,6 +91,7 @@ namespace BookonnectAPI.Controllers
                 UserID = int.Parse(userId),
                 Status = orderDTO.Status,
                 Total = orderDTO.Total,
+                DeliveryID = orderDTO.DeliveryID,
                 OrderItems = orderDTO.OrderItems
                     .Select(orderItemDTO =>
                         new OrderItem {
