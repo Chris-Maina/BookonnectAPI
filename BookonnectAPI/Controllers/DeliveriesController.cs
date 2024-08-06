@@ -2,9 +2,6 @@
 using BookonnectAPI.Data;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
-
 namespace BookonnectAPI.Controllers;
 
 [ApiController]
@@ -22,7 +19,7 @@ public class DeliveriesController : ControllerBase
 
     // GET: api/deliveries
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<DeliveryDTO>>> Get()
+    public async Task<ActionResult<IEnumerable<DeliveryDTO>>> GetDeliveries([FromQuery] QueryParameter deliveryQueryParameters)
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
@@ -40,7 +37,9 @@ public class DeliveriesController : ControllerBase
 
         var deliveries = _context.Deliveries
             .Where(d => d.UserID == user.ID)
+            .Take(deliveryQueryParameters.Size)
             .Select(Delivery.DeliveryToDTO);
+
         return Ok(deliveries);
     }
 
@@ -53,7 +52,7 @@ public class DeliveriesController : ControllerBase
 
     // POST api/deliveries
     [HttpPost]
-    public async Task<ActionResult<DeliveryDTO>> Post([FromBody] DeliveryDTO deliveryDTO)
+    public async Task<ActionResult<DeliveryDTO>> PostDelivery([FromBody] DeliveryDTO deliveryDTO)
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
@@ -76,8 +75,7 @@ public class DeliveriesController : ControllerBase
             Location = deliveryDTO.Location,
             Phone = deliveryDTO.Phone,
             Instructions = deliveryDTO.Instructions,
-            OrderID = deliveryDTO.OrderID,
-            Status = deliveryDTO.Status
+            UserID = user.ID
         };
 
         _context.Deliveries.Add(delivery);
@@ -85,7 +83,7 @@ public class DeliveriesController : ControllerBase
         {
             
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(Post), new DeliveryDTO());
+            return CreatedAtAction(nameof(PostDelivery), Delivery.DeliveryToDTO(delivery));
         } catch (Exception ex)
         {
             _logger.LogError(ex, "Error saving delivery to DB");
@@ -97,13 +95,13 @@ public class DeliveriesController : ControllerBase
 
     // PUT api/deliveries/5
     [HttpPut("{id}")]
-    public void Put(int id, [FromBody]string value)
+    public void PutDelivery(int id, [FromBody]string value)
     {
     }
 
     // DELETE api/deliveries/5
     [HttpDelete("{id}")]
-    public void Delete(int id)
+    public void DeleteDelivery(int id)
     {
     }
 }
