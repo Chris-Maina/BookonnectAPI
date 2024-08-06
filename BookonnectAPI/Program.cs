@@ -19,6 +19,7 @@ builder.Services.AddControllers(options =>
     options.InputFormatters.Insert(0, BookonnectJPIF.GetJsonPatchInputFormatter());
 });
 builder.Services.AddScoped<ITokenLibrary, TokenLibrary>();
+builder.Services.AddScoped<IMpesaLibrary, MpesaLibrary>();
 
 // Connect to DB
 var connectionString = builder.Configuration.GetConnectionString("WebApiDatabase");
@@ -59,9 +60,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddHttpClient("Safaricom", httpClient =>
 {
     httpClient.BaseAddress = new Uri("https://sandbox.safaricom.co.ke");
-
-    httpClient.DefaultRequestHeaders.Add(HeaderNames.Authorization, "Bearer ");
-    httpClient.DefaultRequestHeaders.Add(HeaderNames.ContentType, "application/json");
 });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
