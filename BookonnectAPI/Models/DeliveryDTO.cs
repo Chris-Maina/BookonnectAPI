@@ -10,6 +10,5 @@ public class DeliveryDTO
     public string? Instructions { get; set; }
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public DeliveryStatus Status { get; set; }
-    public int OrderID { get; set; }
 }
 

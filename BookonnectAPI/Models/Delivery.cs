@@ -26,15 +26,12 @@ public class Delivery
 
     /**
      * A delivery can have multiple orders
-     * A delivery cannot exist without order(s)
      */
-    public int OrderID { get; set; } // Required foreign key
-    public ICollection<Order> Orders { get; set; } = null!; // Required collection navigation.
+    public ICollection<Order>? Orders { get; } // Optional collection navigation.
 
     public static DeliveryDTO DeliveryToDTO(Delivery delivery) =>
         new DeliveryDTO
         {
-            OrderID = delivery.ID,
             Name = delivery.Name,
             Location = delivery.Location,
             Phone = delivery.Phone,
