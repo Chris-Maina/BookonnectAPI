@@ -68,12 +68,12 @@ public class BooksController: ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<BookDTO>>> GetBooks([FromQuery] QueryParameter queryParameter)
     {
-        var products = _context.Books
+        var books = _context.Books
                 .Include(b => b.Image)
                 .Select(b => Book.BookToDTO(b))
                 .Skip(queryParameter.Size * (queryParameter.Page - 1))
                 .Take(queryParameter.Size);
-        return Ok(await products.ToArrayAsync());
+        return Ok(await books.ToArrayAsync());
     }
 
     [HttpGet("/me")]
