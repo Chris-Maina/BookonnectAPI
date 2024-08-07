@@ -46,7 +46,7 @@ namespace BookonnectAPI.Lib;
         }
     }
 
-    private async Task<string> PostTransactionStatus(PaymentDTO paymentDTO, string accessToken)
+    private async Task<string> PostTransactionStatus(string transactionID, string accessToken)
     {
 
         // construct mpesa request and send it
@@ -56,11 +56,11 @@ namespace BookonnectAPI.Lib;
             { "Initiator", "testapi" },
             { "SecurityCredential" , "UQcIopoI8SXUjT5f0Su8TzIC6F2XH9NM3Otqm6sYItOHeaP6cbz0pQgWNlLZCCpdnH9KV8enUqsV5bBBre" },
             { "CommandID" , "TransactionStatusQuery" },
-            { "TransactionID", $"{paymentDTO.ID}" },
+            { "TransactionID", $"{transactionID}" },
             // PartyA = 7845640,
             { "PartyA" , "600984" },
             { "IdentifierType" , "4" },
-            { "ResultURL" , "https://localhost:5106/payments/transactionstatus/result/" },
+            { "ResultURL" , "https://mydomain.com/TransactionStatus/result/" }, // must be a https domain. modify after hosting
             { "QueueTimeOutURL" , "https://mydomain.com/TransactionStatus/queue/" },
             { "Remarks" ,"OK" },
         };
@@ -87,16 +87,24 @@ namespace BookonnectAPI.Lib;
             _logger.LogError(ex, $"Request failed with status code: {ex.StatusCode}");
             throw;
         }
+
     }
 
-    public async Task<TransactionStatusResponse?> GetTransactionStatusResponse(PaymentDTO paymentDTO, string accessToken)
+    public async Task<TransactionStatusResponse?> GetTransactionStatusResponse(string transactionID, string accessToken)
     {
-        string response = await PostTransactionStatus(paymentDTO, accessToken);
-        if(string.IsNullOrEmpty(response))
+        try
         {
-            return null;
+            string response = await PostTransactionStatus(transactionID, accessToken);
+            if(string.IsNullOrEmpty(response))
+            {
+                return null;
+            }
+            return JsonConvert.DeserializeObject<TransactionStatusResponse>(response);
         }
-        return JsonConvert.DeserializeObject<TransactionStatusResponse>(response);
+        catch (Exception)
+        {
+            throw;
+        }
     }
 
     public async Task<MpesaAuthToken?> GetMpesaAuthToken()
