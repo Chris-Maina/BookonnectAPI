@@ -56,7 +56,7 @@ public class PaymentsController : ControllerBase
             }
 
             _logger.LogInformation("Fetching transaction status");
-            TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.GetTransactionStatusResponse(paymentDTO, tokenResponse.AccessToken);
+            TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.GetTransactionStatusResponse(paymentDTO.ID, tokenResponse.AccessToken);
 
             if (transactionStatusResponse == null)
             {
@@ -80,7 +80,6 @@ public class PaymentsController : ControllerBase
         var payment = new Payment
         {
             ID = paymentDTO.ID,
-            Phone = paymentDTO.Phone,
             UserID = user.ID,
             DateTime = DateTime.Now
         };
@@ -96,5 +95,16 @@ public class PaymentsController : ControllerBase
             _logger.LogError(ex, "Error saving payment in DB");
             throw;
         }
+    }
+
+    // webhook to listen to Mpesa transaction status result
+    [HttpPost("/transactionstatus/result")]
+    public void PostTransactionStatusResult(JsonResult result)
+    {
+        // Check the DebitPartyName includes the business
+        // find order with the authorised user id, status(OrderPlaced) and payment amount  
+        // if not found means the transaction id is invalid. 400 BadRequest.
+        // Success, create payment
+        Console.WriteLine(result);
     }
 }
