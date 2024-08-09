@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using BookonnectAPI.Lib;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-// Add services to the container.
+// Add services to DI container.
 builder.Services.AddControllers(options =>
 {
     options.InputFormatters.Insert(0, BookonnectJPIF.GetJsonPatchInputFormatter());
@@ -22,7 +21,7 @@ builder.Services.AddScoped<ITokenLibrary, TokenLibrary>();
 builder.Services.AddScoped<IMpesaLibrary, MpesaLibrary>();
 
 // Connect to DB
-var connectionString = builder.Configuration.GetConnectionString("WebApiDatabase");
+var connectionString = builder.Configuration["ConnectionStrings:WebApiDatabase"];
 var connection = new SqliteConnection(connectionString);
 connection.Open();
 builder.Services.AddEntityFrameworkSqlite().AddDbContext<BookonnectContext>(options =>
