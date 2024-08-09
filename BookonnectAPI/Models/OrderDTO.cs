@@ -9,6 +9,7 @@ public class OrderDTO
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public OrderStatus Status { get; set; }
     public int DeliveryID { get; set; }
+    public int PaymentID { get; set; }
     public ICollection<OrderItemDTO> OrderItems { get; set; } = new List<OrderItemDTO>();
 }
 

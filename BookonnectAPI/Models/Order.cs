@@ -31,6 +31,7 @@ public class Order
 	 * Optional reference navigations. An order does not need to be associated with Payment.
 	 * Order is related to one Payment, Delivery
 	 */
+    public int? PaymentID { get; set; }
     public Payment? Payment { get; set; }
 
     public static OrderDTO OrderToDTO(Order order) => new OrderDTO
