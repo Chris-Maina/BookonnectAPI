@@ -23,9 +23,9 @@ namespace BookonnectAPI.Controllers
 
         // GET: api/<OrdersController>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<OrderDTO>>> Get([FromQuery] string[] id)
+        public async Task<ActionResult<IEnumerable<OrderDTO>>> Get()
         {
-            _logger.LogInformation("Getting orders {0}", id);
+            _logger.LogInformation("Getting orders");
             var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
             {
@@ -40,15 +40,13 @@ namespace BookonnectAPI.Controllers
                 return NotFound();
             }
 
-            _logger.LogInformation("Fetching orders by logged in user and ids");
-            var orderIds = id.Select(int.Parse).ToList();
+            _logger.LogInformation("Fetching orders by logged in user");
             var orders = _context.Orders
                 .Where(ord => ord.UserID == user.ID)
-                .Where(ord => orderIds.Contains(ord.ID))
                 .Include(ord => ord.Delivery)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                .ThenInclude(book => book.Image)
+                //.ThenInclude(book => book.Image)
                 .Select(ord => Order.OrderToDTO(ord));
 
             return Ok(await orders.ToArrayAsync());
@@ -92,6 +90,7 @@ namespace BookonnectAPI.Controllers
                 Status = orderDTO.Status,
                 Total = orderDTO.Total,
                 DeliveryID = orderDTO.DeliveryID,
+                PaymentID = orderDTO.PaymentID,
                 OrderItems = orderDTO.OrderItems
                     .Select(orderItemDTO =>
                         new OrderItem {
