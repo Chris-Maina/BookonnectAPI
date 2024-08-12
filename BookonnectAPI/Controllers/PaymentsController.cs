@@ -88,7 +88,7 @@ public class PaymentsController : ControllerBase
         try
         {
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(Post), new { id = payment.ID }, "Successfully made payment");
+            return CreatedAtAction(nameof(Post), new { id = payment.ID }, Payment.PaymentToDTO(payment));
         }
         catch(Exception ex)
         {

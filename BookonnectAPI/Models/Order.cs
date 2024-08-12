@@ -20,18 +20,14 @@ public class Order
      * Required foreign key properties and reference navigations 
      * An order must be associated with a customer/user
      * An order must be associated with a delivery
+     * An order must be associated with Payment
      * 
      */
     public int UserID { get; set; }
 	public User User { get; set; } = null!;
     public int DeliveryID { get; set; }
     public Delivery Delivery { get; set; } = null!;
-
-    /**
-	 * Optional reference navigations. An order does not need to be associated with Payment.
-	 * Order is related to one Payment, Delivery
-	 */
-    public int? PaymentID { get; set; }
+    public string PaymentID { get; set; } = String.Empty;
     public Payment? Payment { get; set; }
 
     public static OrderDTO OrderToDTO(Order order) => new OrderDTO
@@ -39,6 +35,7 @@ public class Order
         ID = order.ID,
         Total = order.Total,
         Status = order.Status,
+        PaymentID = order.PaymentID,
         OrderItems = order.OrderItems.Select(OrderItem.OrderItemToDTO).ToList(),
     };
 }
