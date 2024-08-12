@@ -32,6 +32,7 @@ public class Delivery
     public static DeliveryDTO DeliveryToDTO(Delivery delivery) =>
         new DeliveryDTO
         {
+            ID = delivery.ID,
             Name = delivery.Name,
             Location = delivery.Location,
             Phone = delivery.Phone,
