@@ -4,6 +4,7 @@ namespace BookonnectAPI.Models;
 
 public class DeliveryDTO
 {
+    public int ID { get; set; }
     public string Name { get; set; } = String.Empty;
     public string Location { get; set; } = String.Empty;
     public string Phone { get; set; } = String.Empty;
