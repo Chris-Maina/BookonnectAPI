@@ -2,6 +2,7 @@
 
 public enum DeliveryStatus
 {
+    Draft, // delivery created but order has not been paid for or created
     OrderPlaced, // user has completed checkout and an order is created
     OrderConfirmed, // owner of books has received payment and is preparing to ship
     InTransit, // package is moving between locations or on its way to the recipient
@@ -16,7 +17,7 @@ public class Delivery
     public string Location { get; set; } = String.Empty;
     public string Phone { get; set; } = String.Empty;
     public string? Instructions { get; set; }
-    public DeliveryStatus Status { get; set; } = DeliveryStatus.OrderPlaced;
+    public DeliveryStatus Status { get; set; } = DeliveryStatus.Draft;
 
     /**
      * Delivery needs to be associated with an owner
@@ -40,4 +41,3 @@ public class Delivery
             Instructions = delivery.Instructions
         };
 }
-
