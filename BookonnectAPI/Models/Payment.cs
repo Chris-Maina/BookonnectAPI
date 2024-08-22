@@ -14,7 +14,8 @@ public class Payment
         return new PaymentDTO
         {
             ID = payment.ID,
-            User = payment.User
+            User = payment.User,
+            DateTime = payment.DateTime
         };
     }
 
