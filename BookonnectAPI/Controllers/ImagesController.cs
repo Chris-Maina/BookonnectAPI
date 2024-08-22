@@ -27,8 +27,8 @@ public class ImagesController: ControllerBase
 	[HttpPost]
 	public async Task<ActionResult<Image>> Upload(ImageDTO imageDTO)
 	{
-		var book = await _context.Books.FindAsync(imageDTO.BookID);
-		if (book == null)
+		var bookExists = _context.Books.Any(bk => bk.ID == imageDTO.BookID);
+		if (!bookExists)
 		{
 			return NotFound();
 		}
@@ -48,7 +48,7 @@ public class ImagesController: ControllerBase
 			{
 				Url = result.Url.ToString(),
 				PublicId = result.PublicId,
-				Book = book,
+				BookID = imageDTO.BookID,
 			};
 
             _context.Images.Add(image);
