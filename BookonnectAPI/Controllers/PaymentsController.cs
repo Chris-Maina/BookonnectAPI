@@ -4,6 +4,7 @@ using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BookonnectAPI.Lib;
+using Microsoft.EntityFrameworkCore;
 
 namespace BookonnectAPI.Controllers;
 
@@ -26,9 +27,10 @@ public class PaymentsController : ControllerBase
         _mpesaLibrary = mpesaLibrary;
     }
 
+    // POST: api/Payments
     // Send payment to MPESA to get confirmation
     [HttpPost]
-    public async Task<ActionResult<string>> Post(PaymentDTO paymentDTO)
+    public async Task<ActionResult<PaymentDTO>> PostPayment(PaymentDTO paymentDTO)
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
@@ -37,11 +39,21 @@ public class PaymentsController : ControllerBase
             return NotFound();
         }
 
-        var user = await _context.Users.FindAsync(int.Parse(userId));
-        if (user == null)
+        if (!UserExists(int.Parse(userId)))
         {
             _logger.LogWarning("User with the provided id not found");
             return NotFound();
+        }
+
+        var existingPayment = await _context.Payments
+            .Where(p => p.ID == paymentDTO.ID && p.Order == null)
+            .Include(p => p.User)
+            .FirstOrDefaultAsync();
+         
+        if (existingPayment != null)
+        {
+            _logger.LogInformation("Found an existing payment with the ID {0}", paymentDTO.ID);
+            return Ok(Payment.PaymentToDTO(existingPayment));
         }
 
         try
@@ -80,7 +92,7 @@ public class PaymentsController : ControllerBase
         var payment = new Payment
         {
             ID = paymentDTO.ID,
-            UserID = user.ID,
+            UserID = int.Parse(userId),
             DateTime = DateTime.Now
         };
         _context.Payments.Add(payment);
@@ -88,7 +100,7 @@ public class PaymentsController : ControllerBase
         try
         {
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(Post), new { id = payment.ID }, Payment.PaymentToDTO(payment));
+            return CreatedAtAction(nameof(PostPayment), new { id = payment.ID }, Payment.PaymentToDTO(payment));
         }
         catch(Exception ex)
         {
@@ -107,4 +119,6 @@ public class PaymentsController : ControllerBase
         // Success, create payment
         Console.WriteLine(result);
     }
+
+    private bool UserExists(int id) => _context.Users.Any(user => user.ID == id);
 }
