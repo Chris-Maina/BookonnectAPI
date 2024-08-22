@@ -68,15 +68,18 @@ public class BooksController: ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<BookDTO>>> GetBooks([FromQuery] QueryParameter queryParameter)
     {
-        var books = _context.Books
+        var books = await _context.Books
+                .OrderBy(b => b.ID)
                 .Include(b => b.Image)
                 .Select(b => Book.BookToDTO(b))
                 .Skip(queryParameter.Size * (queryParameter.Page - 1))
-                .Take(queryParameter.Size);
-        return Ok(await books.ToArrayAsync());
+                .Take(queryParameter.Size)
+                .ToArrayAsync();
+
+        return Ok(books);
     }
 
-    [HttpGet("/me")]
+    [HttpGet("me")]
     [Authorize]
     public async Task<ActionResult<IEnumerable<BookDTO>>> GetMyBooks()
     {
@@ -87,19 +90,19 @@ public class BooksController: ControllerBase
             return NotFound();
         }
 
-        var user = await _context.Users.FindAsync(int.Parse(userId));
-        if (user == null)
+        if (!UserExists(int.Parse(userId)))
         {
             _logger.LogWarning("User with the provided id not found");
             return NotFound();
         }
 
-        var products = _context.Books
-                .Where(b => b.UserID == user.ID)
+        var books = await _context.Books
+                .Where(b => b.UserID == int.Parse(userId))
                 .Include(b => b.Image)
-                .Select(Book.BookToDTO);
+                .Select(b => Book.BookToDTO(b))
+                .ToArrayAsync();
 
-        return Ok(products);
+        return Ok(books);
     }
 
     [HttpGet("{id}")]
