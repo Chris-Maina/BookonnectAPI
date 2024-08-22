@@ -33,20 +33,18 @@ namespace BookonnectAPI.Controllers
                 return Unauthorized();
             }
 
-            var user = await _context.Users.FindAsync(int.Parse(userId));
-            if (user == null)
+            if (!UserExists(int.Parse(userId)))
             {
-                _logger.LogWarning("User in token not found");
+                _logger.LogWarning("User in token does not exist");
                 return NotFound();
             }
 
             _logger.LogInformation("Fetching orders by logged in user");
             var orders = _context.Orders
-                .Where(ord => ord.UserID == user.ID)
+                .Where(ord => ord.UserID == int.Parse(userId))
                 .Include(ord => ord.Delivery)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                //.ThenInclude(book => book.Image)
                 .Select(ord => Order.OrderToDTO(ord));
 
             return Ok(await orders.ToArrayAsync());

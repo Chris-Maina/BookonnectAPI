@@ -20,7 +20,7 @@ public class Order
      * Required foreign key properties and reference navigations 
      * An order must be associated with a customer/user
      * An order must be associated with a delivery
-     * An order must be associated with Payment
+     * An order must be associated with a Payment
      * 
      */
     public int UserID { get; set; }
