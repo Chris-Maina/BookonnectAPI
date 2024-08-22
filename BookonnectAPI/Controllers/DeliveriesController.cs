@@ -1,10 +1,15 @@
 ﻿using System.Security.Claims;
 using BookonnectAPI.Data;
 using BookonnectAPI.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
 namespace BookonnectAPI.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("/api/[controller]")]
 public class DeliveriesController : ControllerBase
 {
@@ -19,7 +24,7 @@ public class DeliveriesController : ControllerBase
 
     // GET: api/deliveries
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<DeliveryDTO>>> GetDeliveries([FromQuery] QueryParameter deliveryQueryParameters)
+    public async Task<ActionResult<IEnumerable<DeliveryDTO>>> GetDeliveries([FromQuery] QueryParameter queryParameter)
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
@@ -28,17 +33,17 @@ public class DeliveriesController : ControllerBase
             return NotFound();
         }
 
-        var user = await _context.Users.FindAsync(int.Parse(userId));
-        if (user == null)
+        if (!UserExists(int.Parse(userId)))
         {
             _logger.LogWarning("User with the provided id not found");
             return NotFound();
         }
 
-        var deliveries = _context.Deliveries
-            .Where(d => d.UserID == user.ID)
-            .Take(deliveryQueryParameters.Size)
-            .Select(Delivery.DeliveryToDTO);
+        var deliveries = await _context.Deliveries
+            .Where(d => d.UserID == int.Parse(userId))
+            .Take(queryParameter.Size)
+            .Select(d => Delivery.DeliveryToDTO(d))
+            .ToArrayAsync();
 
         return Ok(deliveries);
     }
@@ -61,11 +66,18 @@ public class DeliveriesController : ControllerBase
             return NotFound();
         }
 
-        var user = await _context.Users.FindAsync(int.Parse(userId));
-        if (user == null)
+        if (!UserExists(int.Parse(userId)))
         {
             _logger.LogWarning("User with the provided id not found");
             return NotFound();
+        }
+
+        var deliveryExists = _context.Deliveries.Any(d => d.Name == deliveryDTO.Name && d.Location == deliveryDTO.Location && d.Phone == deliveryDTO.Phone);
+
+        if (deliveryExists)
+        {
+            _logger.LogWarning("Delivery exists");
+            return Conflict();
         }
 
         _logger.LogInformation("Creating delivery");
@@ -75,7 +87,7 @@ public class DeliveriesController : ControllerBase
             Location = deliveryDTO.Location,
             Phone = deliveryDTO.Phone,
             Instructions = deliveryDTO.Instructions,
-            UserID = user.ID
+            UserID = int.Parse(userId)
         };
 
         _context.Deliveries.Add(delivery);
@@ -99,10 +111,66 @@ public class DeliveriesController : ControllerBase
     {
     }
 
+    // PATCH api/deliveries/5
+    [HttpPatch("{id}")]
+    public async Task<ActionResult<DeliveryDTO>> PatchDelivery(int id, [FromBody] JsonPatchDocument<Delivery> patchDocument)
+    {
+        if (patchDocument == null)
+        {
+            return BadRequest(ModelState);
+        }
+
+        _logger.LogInformation("Fetching delivery with id {0}", id);
+        var delivery = await _context.Deliveries.FindAsync(id);
+        if (delivery == null)
+        {
+            _logger.LogWarning("Delivery with the specified id {0} not found", id);
+            return NotFound();
+        }
+
+        patchDocument.ApplyTo(delivery, ModelState);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        _context.Update(delivery);
+        try
+        {
+            await _context.SaveChangesAsync();
+            return new ObjectResult(Delivery.DeliveryToDTO(delivery));
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            if (!DeliveryExists(id))
+            {
+                _logger.LogError("Delivery with id {0} does not exist", id);
+                return NotFound();
+            }
+            else
+            {
+                _logger.LogError(ex.Message);
+               throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex.Message);
+            throw;
+        }
+    }
+
     // DELETE api/deliveries/5
     [HttpDelete("{id}")]
     public void DeleteDelivery(int id)
     {
     }
+
+    private bool DeliveryExists(int id)
+    {
+        return _context.CartItems.Any(e => e.ID == id);
+    }
+
+    private bool UserExists(int id) => _context.Users.Any(user => user.ID == id);
 }
 
