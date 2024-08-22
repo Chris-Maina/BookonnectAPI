@@ -10,7 +10,7 @@ public class Image
     public string? File { get; set; } = String.Empty;  // base64 file string
 
     public int BookID { get; set; } // Required foreign key property
-    public Book Book { get; set; } = null!; // Required reference navigation. An image must be associated with a book
+    public Book? Book { get; set; }
 
     public static ImageDTO ImageToDTO(Image image) => new ImageDTO
     {
