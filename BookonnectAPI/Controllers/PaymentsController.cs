@@ -30,19 +30,25 @@ public class PaymentsController : ControllerBase
     // POST: api/Payments
     // Send payment to MPESA to get confirmation
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<ActionResult<PaymentDTO>> PostPayment(PaymentDTO paymentDTO)
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
         {
             _logger.LogWarning("User id not found in token");
-            return NotFound();
+            return Unauthorized(new { Message = "Please sign in again." });
         }
 
         if (!UserExists(int.Parse(userId)))
         {
             _logger.LogWarning("User with the provided id not found");
-            return NotFound();
+            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         var existingPayment = await _context.Payments
@@ -64,7 +70,7 @@ public class PaymentsController : ControllerBase
             if (tokenResponse == null)
             {
                 _logger.LogWarning("MPESA access token not found");
-                return NotFound();
+                return NotFound(new { Message = "Could not fetch MPESA auth token. Try again later." });
             }
 
             _logger.LogInformation("Fetching transaction status");
@@ -73,12 +79,12 @@ public class PaymentsController : ControllerBase
             if (transactionStatusResponse == null)
             {
                 _logger.LogWarning("Could not find transaction for payment with key {0}", paymentDTO.ID);
-                return NotFound();
+                return NotFound(new { Message = "Could not find transaction with the provided MPESA code" });
             }
             if (transactionStatusResponse.ResponseCode != 0)
             {
                 _logger.LogError("The payment key {0} has the tranaction error {1}", paymentDTO.ID, transactionStatusResponse);
-                return BadRequest();
+                return BadRequest(new { Message = "MPESA code has an error. Check and try again." });
             }
             _logger.LogInformation("Received successfull transaction status {0}", transactionStatusResponse);
            
@@ -86,7 +92,7 @@ public class PaymentsController : ControllerBase
         catch(Exception ex)
         {
             _logger.LogError(ex, "Error sending MPESA request");
-            throw;
+            return StatusCode(500, ex.Message);
         }
 
         var payment = new Payment
@@ -105,7 +111,7 @@ public class PaymentsController : ControllerBase
         catch(Exception ex)
         {
             _logger.LogError(ex, "Error saving payment in DB");
-            throw;
+            return StatusCode(500, ex.Message);
         }
     }
 

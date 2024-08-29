@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Net;
+using System.Security.Claims;
 using BookonnectAPI.Data;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -23,24 +24,29 @@ public class BooksController: ControllerBase
 
 	[HttpPost]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<BookDTO>> PostBook(BookDTO bookDTO)
 	{
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (userId == null)
         {
-            return Unauthorized();
+            return Unauthorized(new { Message = "Please sign in again." });
         }
 
         if (!UserExists(int.Parse(userId)))
         {
-            return NotFound();
+            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         bool bookExists = _context.Books.Any(bk => (bk.ISBN == bookDTO.ISBN && bk.Title == bookDTO.Title && bk.Author == bookDTO.Author));
         if (bookExists)
         {
-            return Conflict();
+            return Conflict(new { Message = "Book already exists." });
         }
 
         var book = new Book
@@ -58,14 +64,15 @@ public class BooksController: ControllerBase
         {
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(PostBook), new { id = book.ID }, Book.BookToDTO(book));
-        } catch (Exception)
+        } catch (Exception ex)
         {
-            throw;
+            return StatusCode(500, ex.Message);
         }
        
     }
 
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<BookDTO>>> GetBooks([FromQuery] QueryParameter queryParameter)
     {
         var books = await _context.Books
@@ -81,19 +88,22 @@ public class BooksController: ControllerBase
 
     [HttpGet("me")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<BookDTO>>> GetMyBooks()
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
         {
             _logger.LogWarning("User id not found in token");
-            return NotFound();
+            return Unauthorized(new { Message = "Please sign in again." });
         }
 
         if (!UserExists(int.Parse(userId)))
         {
             _logger.LogWarning("User with the provided id not found");
-            return NotFound();
+            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         var books = await _context.Books
@@ -107,13 +117,15 @@ public class BooksController: ControllerBase
 
     [HttpGet("{id}")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<BookDTO>> GetBook(int id)
     {
         var book = await _context.Books.Include(b => b.Image).FirstOrDefaultAsync(b => b.ID == id);
 
         if (book == null)
         {
-            return NotFound();
+            return NotFound(new { Message = "Book not found." });
         }
 
         return Ok(Book.BookToDTO(book));
@@ -121,17 +133,21 @@ public class BooksController: ControllerBase
 
     [HttpPut("{id}")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult> PutBook(int id, [FromQuery] BookDTO bookDTO)
     {
         if (id != bookDTO.ID)
         {
-            return BadRequest();
+            return BadRequest(new { Message = "Provided book id does not match. Check and try again" });
         }
 
         var book = await _context.Books.FindAsync(id);
         if (book == null)
         {
-            return NotFound();
+            return NotFound(new { Message = "Book not found." });
         }
 
         book.Title = bookDTO.Title;
@@ -147,24 +163,29 @@ public class BooksController: ControllerBase
             return NoContent();
 
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException ex)
         {
             if (!BookExists(id))
             {
-                return NotFound();
+                return NotFound(new { Message = "Book not found." });
             }
             else
             {
-                throw;
+                return StatusCode(500, ex.Message);
             }
         }
-        catch(Exception)
+        catch(Exception ex)
         {
-            throw;
+            return StatusCode(500, ex.Message);
         }
     }
 
     [HttpPatch("{id}")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<BookDTO>> PatchBook(int id, [FromBody] JsonPatchDocument<Book> patchDoc)
     {
         if (patchDoc == null)
@@ -175,7 +196,7 @@ public class BooksController: ControllerBase
         var book = await _context.Books.FindAsync(id);
         if (book == null)
         {
-            return NotFound();
+            return NotFound(new { Message = "Book not found." });
         }
 
         patchDoc.ApplyTo(book, ModelState);
@@ -188,33 +209,36 @@ public class BooksController: ControllerBase
         try
         {
             await _context.SaveChangesAsync();
-            return new ObjectResult(Book.BookToDTO(book));
+            return Ok(Book.BookToDTO(book));
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException ex)
         {
             if (!BookExists(id))
             {
-                return NotFound();
+                return NotFound(new { Message = "Book not found." });
             }
             else
             {
-                throw;
+                return StatusCode(500, ex.Message);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw;
+            return StatusCode(500, ex.Message);
         }
     }
 
     [HttpDelete("{id}")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult> DeleteBook(int id)
     {
         var book = await _context.Books.FindAsync(id);
         if (book == null)
         {
-            return NotFound();
+            return NotFound(new { Message = "Book not found." });
         }
 
         _context.Books.Remove(book);
@@ -223,9 +247,9 @@ public class BooksController: ControllerBase
             await _context.SaveChangesAsync();
             return NoContent();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw;
+            return StatusCode(500, ex.Message);
         }
     }
 

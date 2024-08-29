@@ -21,28 +21,31 @@ public class UsersController: ControllerBase
 
 
 	[HttpPost]
-	public async Task<ActionResult<User>> PostUser(User user)
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<User>> PostUser(User user)
 	{
 		bool userExists = _context.Users.Any(u => u.Email == user.Email);
 		if (userExists)
 		{
-			return Conflict();
+			return Conflict(new { Message = "User already exisits" });
 
         }
 		_context.Users.Add(user);
         try
         {
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(PostUser), new { id = user.ID }, user);
+            return CreatedAtAction(nameof(GetUser), new { id = user.ID }, user);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw;
+            return StatusCode(500, ex.Message);
         }
 		
 	}
 
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<User[]>> GetUsers()
     {
         var users = await _context.Users.ToListAsync();
@@ -50,29 +53,35 @@ public class UsersController: ControllerBase
     }
 
     [HttpGet("{id}")]
-	public async Task<ActionResult<User>> GetUser(int id)
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<User>> GetUser(int id)
 	{
         var user = await _context.Users.FindAsync(id);
 
         if (user == null)
         {
-            return NotFound();
+            return NotFound(new { Message = "User not found." });
         }
 
         return Ok(user);
     }
 
     [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult> PutUser(int id, [FromBody] User user)
     {
         if (id != user.ID)
         {
-            return BadRequest();
+            return BadRequest(new { Message = "ID in params does not match user id in payload. Check and try again" });
         }
 
         if (!UserExists(id))
         {
-            return NotFound();
+            return NotFound(new { Message = "User not found" });
         }
 
         _context.Users.Entry(user).State = EntityState.Modified;
@@ -81,25 +90,29 @@ public class UsersController: ControllerBase
             await _context.SaveChangesAsync();
             return NoContent();
 
-        } catch (DbUpdateConcurrencyException)
+        } catch (DbUpdateConcurrencyException ex)
         {
             if (!UserExists(id))
             {
-                return NotFound();
+                return NotFound(new { Message = "User not found" });
             }
             else
             {
                 // log exception
-                throw;
+                return StatusCode(500, ex.Message);
             }
-        } catch (Exception)
+        } catch (Exception ex)
         {
             // log exception
-            throw;
+            return StatusCode(500, ex.Message);
         }
     }
 
     [HttpPatch("{id}")]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<User>> PatchUser(int id, [FromBody] JsonPatchDocument<User> patchDocument)
     {
         if (patchDocument == null)
@@ -110,7 +123,7 @@ public class UsersController: ControllerBase
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
-            return NotFound();
+            return NotFound(new { Message = "User not found" });
         }
 
         patchDocument.ApplyTo(user, ModelState);
@@ -123,21 +136,21 @@ public class UsersController: ControllerBase
         try
         {
             await _context.SaveChangesAsync();
-            return new ObjectResult(user);
-        } catch (DbUpdateConcurrencyException)
+            return Ok(user);
+        } catch (DbUpdateConcurrencyException ex)
         {
             if (!UserExists(id))
             {
-                return NotFound();
+                return NotFound(new { Message = "User not found" });
             }
             else
             {
-                throw;
+                return StatusCode(500, ex.Message);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw;
+            return StatusCode(500, ex.Message);
         }
 
     }

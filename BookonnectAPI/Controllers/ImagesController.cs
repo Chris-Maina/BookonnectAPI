@@ -30,7 +30,7 @@ public class ImagesController: ControllerBase
 		var bookExists = _context.Books.Any(bk => bk.ID == imageDTO.BookID);
 		if (!bookExists)
 		{
-			return NotFound();
+			return NotFound("Book not found");
 		}
 
         var uploadParams = new ImageUploadParams()
@@ -58,7 +58,7 @@ public class ImagesController: ControllerBase
         }
 		catch (Exception)
 		{
-			throw;
+			return StatusCode(500);
 		}
         
 	}
@@ -71,7 +71,7 @@ public class ImagesController: ControllerBase
 
         if (image == null)
         {
-            return NotFound();
+            return NotFound("Image not found");
         }
 
         var deletionParams = new DeletionParams(image.PublicId);
@@ -84,7 +84,7 @@ public class ImagesController: ControllerBase
         }
 		catch(Exception)
 		{
-			throw;
+			return StatusCode(500);
 		}
     }
 

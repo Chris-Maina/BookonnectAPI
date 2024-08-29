@@ -23,6 +23,9 @@ namespace BookonnectAPI.Controllers
 
         // GET: api/<OrdersController>
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> Get()
         {
             _logger.LogInformation("Getting orders");
@@ -30,13 +33,13 @@ namespace BookonnectAPI.Controllers
             if (userId == null)
             {
                 _logger.LogWarning("No token found");
-                return Unauthorized();
+                return Unauthorized(new { Message = "Please sign in again." });
             }
 
             if (!UserExists(int.Parse(userId)))
             {
                 _logger.LogWarning("User in token does not exist");
-                return NotFound();
+                return NotFound(new { Message = "User not found. Sign in again." });
             }
 
             _logger.LogInformation("Fetching orders by logged in user");
@@ -59,6 +62,11 @@ namespace BookonnectAPI.Controllers
 
         // POST api/<OrdersController>
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<OrderDTO>> Post([FromBody] OrderDTO orderDTO)
         {
             _logger.LogInformation("Creating order");
@@ -66,20 +74,20 @@ namespace BookonnectAPI.Controllers
             if (userId == null)
             {
                 _logger.LogWarning("There is no user id in token");
-                return Unauthorized();
+                return Unauthorized(new { Message = "Please sign in again." });
             }
 
             if (!UserExists(int.Parse(userId)))
             {
                 _logger.LogWarning("User in token does not exist");
-                return NotFound();
+                return NotFound(new { Message = "User not found. Sign in again." });
             }
 
             bool orderExists = _context.Orders.Any(ord => ord.Total == orderDTO.Total && ord.Status == orderDTO.Status && ord.User.ID == int.Parse(userId));
             if (orderExists)
             {
                 _logger.LogWarning("Order exists");
-                return Conflict();
+                return Conflict(new { Message = "Order already exists" });
             }
 
             var order = new Order
@@ -108,7 +116,7 @@ namespace BookonnectAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating order");
-                throw;
+                return StatusCode(500, ex.Message);
             }
 
         }

@@ -24,19 +24,21 @@ public class DeliveriesController : ControllerBase
 
     // GET: api/deliveries
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<DeliveryDTO>>> GetDeliveries([FromQuery] QueryParameter queryParameter)
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
         {
             _logger.LogWarning("User id not found in token");
-            return NotFound();
+            return Unauthorized(new { Message = "Please sign in again." });
         }
 
         if (!UserExists(int.Parse(userId)))
         {
             _logger.LogWarning("User with the provided id not found");
-            return NotFound();
+            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         var deliveries = await _context.Deliveries
@@ -57,19 +59,23 @@ public class DeliveriesController : ControllerBase
 
     // POST api/deliveries
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<DeliveryDTO>> PostDelivery([FromBody] DeliveryDTO deliveryDTO)
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
         {
             _logger.LogWarning("User id not found in token");
-            return NotFound();
+            return Unauthorized(new { Message = "Please sign in again." });
         }
 
         if (!UserExists(int.Parse(userId)))
         {
             _logger.LogWarning("User with the provided id not found");
-            return NotFound();
+            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         var deliveryExists = _context.Deliveries.Any(d => d.Name == deliveryDTO.Name && d.Location == deliveryDTO.Location && d.Phone == deliveryDTO.Phone);
@@ -77,7 +83,7 @@ public class DeliveriesController : ControllerBase
         if (deliveryExists)
         {
             _logger.LogWarning("Delivery exists");
-            return Conflict();
+            return Conflict(new { Message = "Delivery already exists" });
         }
 
         _logger.LogInformation("Creating delivery");
@@ -99,7 +105,7 @@ public class DeliveriesController : ControllerBase
         } catch (Exception ex)
         {
             _logger.LogError(ex, "Error saving delivery to DB");
-            throw;
+            return StatusCode(500, ex.Message);
         }
          
        
@@ -113,6 +119,9 @@ public class DeliveriesController : ControllerBase
 
     // PATCH api/deliveries/5
     [HttpPatch("{id}")]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<DeliveryDTO>> PatchDelivery(int id, [FromBody] JsonPatchDocument<Delivery> patchDocument)
     {
         if (patchDocument == null)
@@ -125,7 +134,7 @@ public class DeliveriesController : ControllerBase
         if (delivery == null)
         {
             _logger.LogWarning("Delivery with the specified id {0} not found", id);
-            return NotFound();
+            return NotFound(new { Message = "Delivery with provided id does not exist" });
         }
 
         patchDocument.ApplyTo(delivery, ModelState);
@@ -145,18 +154,18 @@ public class DeliveriesController : ControllerBase
             if (!DeliveryExists(id))
             {
                 _logger.LogError("Delivery with id {0} does not exist", id);
-                return NotFound();
+                return NotFound(new { Message = "Delivery not found" });
             }
             else
             {
                 _logger.LogError(ex.Message);
-               throw;
+               return StatusCode(500, ex.Message);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex.Message);
-            throw;
+            return StatusCode(500, ex.Message);
         }
     }
 

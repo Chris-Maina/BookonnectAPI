@@ -5,7 +5,6 @@ using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.Extensions.Logging;
 
 namespace BookonnectAPI.Controllers
 {
@@ -25,18 +24,21 @@ namespace BookonnectAPI.Controllers
 
         // GET: api/CartItems
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<CartItemDTO>>> GetCartItems()
         {
             var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
             {
                 _logger.LogWarning("User id not found in token");
-                return Unauthorized();
+                return Unauthorized(new { Message = "Please sign in again." });
             }
 
             if (!UserExists(int.Parse(userId)))
             {
-                return NotFound();
+                return NotFound(new { Message = "User not found. Sign in again." });
             }
 
             _logger.LogInformation("Fetching cart items");
@@ -51,13 +53,15 @@ namespace BookonnectAPI.Controllers
 
         // GET: api/CartItems/5
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<CartItemDTO>> GetCartItem(int id)
         {
             var cartItem = await _context.CartItems.FindAsync(id);
 
             if (cartItem == null)
             {
-                return NotFound();
+                return NotFound(new { Message = "Cart item not found." });
             }
 
             return CartItem.CartItemToDTO(cartItem);
@@ -66,11 +70,16 @@ namespace BookonnectAPI.Controllers
         // PUT: api/CartItems/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> PutCartItem(int id, CartItem cartItem)
         {
             if (id != cartItem.ID)
             {
-                return BadRequest();
+                _logger.LogWarning("ID in params {0} does not match cart item id {1}", id, cartItem.ID);
+                return BadRequest(new { message = "Wrong book id in URL. Check and try again." });
             }
 
             _context.Entry(cartItem).State = EntityState.Modified;
@@ -78,23 +87,26 @@ namespace BookonnectAPI.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                return NoContent();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException ex)
             {
                 if (!CartItemExists(id))
                 {
-                    return NotFound();
+                    return NotFound(new { Message = "Cart item not found." });
                 }
                 else
                 {
-                    throw;
+                    return StatusCode(500, ex.Message);
                 }
             }
-
-            return NoContent();
         }
 
         [HttpPatch("{id}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<CartItemDTO>> PatchCartItem(int id, [FromBody] JsonPatchDocument<CartItem> patchDoc)
         {
             if (patchDoc == null)
@@ -105,7 +117,7 @@ namespace BookonnectAPI.Controllers
             var cartItem = await _context.CartItems.FindAsync(id);
             if (cartItem == null)
             {
-                return NotFound();
+                return NotFound(new { Message = "Cart item not found." });
             }
 
             patchDoc.ApplyTo(cartItem, ModelState);
@@ -118,47 +130,55 @@ namespace BookonnectAPI.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-                return new ObjectResult(CartItem.CartItemToDTO(cartItem));
+                return Ok(CartItem.CartItemToDTO(cartItem));
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException ex)
             {
                 if (!CartItemExists(id))
                 {
-                    return NotFound();
+                    return NotFound(new { Message = "Cart item not found." });
                 }
                 else
                 {
-                    throw;
+                    _logger.LogError(ex.Message);
+                    return StatusCode(500, ex.Message);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                _logger.LogError(ex.Message);
+                return StatusCode(500, ex.Message);
             }
         }
 
         // POST: api/CartItems
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<CartItemDTO>> PostCartItem(CartItemDTO cartItemDTO)
         {
             var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
             {
                 _logger.LogWarning("User id not found in token");
-                return Unauthorized();
+                return Unauthorized(new { Message = "Please sign in again." });
             }
 
             if (!UserExists(int.Parse(userId)))
             {
-                return NotFound();
+                _logger.LogWarning("Logged in user not found.");
+                return NotFound(new { Message = "User not found. Sign in again." });
             }
 
             bool cartItemExist = _context.CartItems.Any(cartItem => cartItem.BookID == cartItemDTO.BookID && cartItem.UserID == int.Parse(userId));
             if (cartItemExist)
             {
                 _logger.LogWarning("A cart item with the associated book exists");
-                return Conflict();
+                return Conflict(new { Message = "A cart item with the associated book exists" });
             }
 
             var cartItem = new CartItem
@@ -174,22 +194,26 @@ namespace BookonnectAPI.Controllers
                 await _context.SaveChangesAsync();
                 return CreatedAtAction("GetCartItem", new { id = cartItem.ID }, CartItem.CartItemToDTO(cartItem));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                _logger.LogError(ex.Message);
+                return StatusCode(500, ex.Message);
             }
 
         }
 
         // DELETE: api/CartItems/5
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteCartItem(int id)
         {
             _logger.LogInformation("Fetching item to delete");
             var cartItem = await _context.CartItems.FindAsync(id);
             if (cartItem == null)
             {
-                return NotFound();
+                return NotFound(new { Message = "Cart item not found." });
             }
 
             _context.CartItems.Remove(cartItem);
@@ -198,9 +222,10 @@ namespace BookonnectAPI.Controllers
             {
                 await _context.SaveChangesAsync();
                 return NoContent();
-            } catch (Exception)
+            } catch (Exception ex)
             {
-                throw;
+                _logger.LogError(ex.Message);
+                return StatusCode(500, ex.Message);
             }
 
         }
@@ -208,19 +233,23 @@ namespace BookonnectAPI.Controllers
         // POST: api/CartItems/Delete
         [HttpPost]
         [Route("Delete")]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> DeleteMultipleCartItems([FromQuery] int[] id)
         {
             var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
             {
                 _logger.LogWarning("User id not found in token");
-                return Unauthorized();
+                return Unauthorized(new { Message = "Please sign in again." });
             }
 
             if (!UserExists(int.Parse(userId)))
             {
                 _logger.LogWarning("User with id {0} not found", userId);
-                return NotFound();
+                return NotFound(new { Message = "User not found. Sign in again." });
             }
 
             try
@@ -232,8 +261,8 @@ namespace BookonnectAPI.Controllers
                     var cartItem = await _context.CartItems.FirstOrDefaultAsync(ci => ci.ID == cartItemId && ci.UserID == int.Parse(userId));
                     if (cartItem == null)
                     {
-                        _logger.LogWarning("Could not find cart item with id {0}", id);
-                        return NotFound();
+                        _logger.LogWarning("Could not find cart item with id {0}", cartItemId);
+                        return NotFound(new { Message = "Could not find one of the cart items" });
                     }
                     _context.CartItems.Remove(cartItem);
                 }
@@ -244,7 +273,7 @@ namespace BookonnectAPI.Controllers
             } catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
-                return StatusCode(500);
+                return StatusCode(500, ex.Message);
             }
         }
         private bool CartItemExists(int id)
