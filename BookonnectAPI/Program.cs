@@ -1,5 +1,4 @@
 using BookonnectAPI.Data;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using BookonnectAPI.Lib;
@@ -21,12 +20,16 @@ builder.Services.AddScoped<ITokenLibrary, TokenLibrary>();
 builder.Services.AddScoped<IMpesaLibrary, MpesaLibrary>();
 
 // Connect to DB
-var connectionString = builder.Configuration["ConnectionStrings:WebApiDatabase"];
-var connection = new SqliteConnection(connectionString);
-connection.Open();
-builder.Services.AddEntityFrameworkSqlite().AddDbContext<BookonnectContext>(options =>
-    options.UseSqlite(connectionString)
-);
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddEntityFrameworkSqlite().AddDbContext<BookonnectContext>(options =>
+        options.UseSqlite("Data Source=./Data/Bookonnect.db")
+    );
+}
+else {
+    builder.Services.AddDbContext<BookonnectContext>(options =>
+        options.UseMySQL(builder.Configuration.GetConnectionString("AZURE_MYSQL_CONNECTIONSTRING")));
+}
 
 // CORS policy
 builder.Services.AddCors(options => {
