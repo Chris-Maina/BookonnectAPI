@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BookonnectAPI.Data;
+using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,11 +15,13 @@ namespace BookonnectAPI.Controllers
     {
         private readonly BookonnectContext _context;
         private readonly ILogger<OrdersController> _logger;
-        public OrdersController(BookonnectContext context, ILogger<OrdersController> logger)
+        private readonly IMailLibrary _mailLibrary;
+        public OrdersController(BookonnectContext context, ILogger<OrdersController> logger, IMailLibrary mailLibrary)
         {
             _context = context;
             context.Database.EnsureCreated();
             _logger = logger;
+            _mailLibrary = mailLibrary;
         }
 
         // GET: api/<OrdersController>
@@ -26,7 +29,7 @@ namespace BookonnectAPI.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<OrderDTO>>> Get()
+        public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrders([FromQuery] OrderQueryParameters orderQueryParameters)
         {
             _logger.LogInformation("Getting orders");
             var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -43,9 +46,22 @@ namespace BookonnectAPI.Controllers
             }
 
             _logger.LogInformation("Fetching orders by logged in user");
-            var orders = _context.Orders
+            IQueryable<OrderDTO> orders;
+            if (orderQueryParameters.Status != null && orderQueryParameters.Total != null)
+            {
+                orders = _context.Orders
+                    .Where(ord =>
+                        ord.UserID == int.Parse(userId) &&
+                        ord.Status == orderQueryParameters.Status &&
+                        ord.Total == orderQueryParameters.Total)
+                    .Include(ord => ord.OrderItems)
+                    .ThenInclude(orderItem => orderItem.Book)
+                    .Select(ord => Order.OrderToDTO(ord));
+
+                return Ok(await orders.ToArrayAsync());
+            }
+            orders = _context.Orders
                 .Where(ord => ord.UserID == int.Parse(userId))
-                .Include(ord => ord.Delivery)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
                 .Select(ord => Order.OrderToDTO(ord));
@@ -55,9 +71,37 @@ namespace BookonnectAPI.Controllers
 
         // GET api/<OrdersController>/5
         [HttpGet("{id}")]
-        public string Get(int id)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult<OrderDTO>> GetOrder(int id)
         {
-            return "value";
+            _logger.LogInformation("Getting orders");
+            var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+            {
+                _logger.LogWarning("No token found");
+                return Unauthorized(new { Message = "Please sign in again." });
+            }
+
+            if (!UserExists(int.Parse(userId)))
+            {
+                _logger.LogWarning("User in token does not exist");
+                return NotFound(new { Message = "User not found. Sign in again." });
+            }
+
+            var order = await _context.Orders
+                .Include(ord => ord.OrderItems)
+                .ThenInclude(orderItem => orderItem.Book)
+                .ThenInclude(book => book != null ? book.Image : null)
+                .FirstOrDefaultAsync(ord => ord.ID == id);
+
+            if (order == null)
+            {
+                return NotFound(new { Message = "Order not found." });
+            }
+
+            return Ok(Order.OrderToDTO(order));
         }
 
         // POST api/<OrdersController>
@@ -77,7 +121,8 @@ namespace BookonnectAPI.Controllers
                 return Unauthorized(new { Message = "Please sign in again." });
             }
 
-            if (!UserExists(int.Parse(userId)))
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.ID == int.Parse(userId));
+            if (user == null)
             {
                 _logger.LogWarning("User in token does not exist");
                 return NotFound(new { Message = "User not found. Sign in again." });
@@ -92,11 +137,9 @@ namespace BookonnectAPI.Controllers
 
             var order = new Order
             {
-                UserID = int.Parse(userId),
+                UserID = user.ID,
                 Status = orderDTO.Status,
                 Total = orderDTO.Total,
-                DeliveryID = orderDTO.DeliveryID,
-                PaymentID = orderDTO.PaymentID,
                 OrderItems = orderDTO.OrderItems
                     .Select(orderItemDTO =>
                         new OrderItem {
@@ -111,7 +154,9 @@ namespace BookonnectAPI.Controllers
             {
                 _logger.LogInformation("Saving order to database");
                 await _context.SaveChangesAsync();
-                return CreatedAtAction(nameof(Post), new { id = order.ID }, Order.OrderToDTO(order));
+                // Send Order Confirmation message
+                SendOrderConfirmationEmail(user);
+                return CreatedAtAction(nameof(GetOrder), new { id = order.ID }, Order.OrderToDTO(order));
             }
             catch (Exception ex)
             {
@@ -123,16 +168,34 @@ namespace BookonnectAPI.Controllers
 
         // PUT api/<OrdersController>/5
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        public void PutOrder(int id, [FromBody] string value)
         {
         }
 
         // DELETE api/<OrdersController>/5
         [HttpDelete("{id}")]
-        public void Delete(int id)
+        public void DeleteOrder(int id)
         {
         }
 
         private bool UserExists(int id) => _context.Users.Any(u => u.ID == id);
+
+        private void SendOrderConfirmationEmail(User receiver)
+        {
+            var emailData = new Email {
+                    Subject = "Your order has been confirmed",
+                    ToId = receiver.Email,
+                    Name = receiver.Name,
+                    Body = $@"<html><body>
+                        <p>Hi {receiver.Name},</p>
+                        <p>Thank you for making a purchase on Bookonnect! Your order has been confirmed successfully.
+                           We have reached out to the owner to start delivery. You should receive the book in 3 days. If this is not the case click here.
+                        </p>
+                        <p>Warm regards,</p>
+                        <p>Bookonnect Team.</p>"
+                };
+
+            _mailLibrary.SendMail(emailData);
+        }
     }
 }
