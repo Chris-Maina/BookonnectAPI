@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Threading.Tasks;
 using BookonnectAPI.Data;
 using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
@@ -17,14 +18,16 @@ public class AuthController: ControllerBase
 	private readonly IConfiguration _configuration;
 	private readonly ITokenLibrary _tokenLibrary;
 	private readonly ILogger<AuthController> _logger;
-	public AuthController(BookonnectContext context, IConfiguration configuration, ITokenLibrary tokenLibrary, ILogger<AuthController> logger)
+	private readonly IMailLibrary _mailLibrary;
+	public AuthController(BookonnectContext context, IConfiguration configuration, ITokenLibrary tokenLibrary, ILogger<AuthController> logger, IMailLibrary mailLibrary)
 	{
 		_context = context;
 		_context.Database.EnsureCreated();
         _configuration = configuration;
 		_tokenLibrary = tokenLibrary;
 		_logger = logger;
-	}
+		_mailLibrary = mailLibrary;
+    }
 
 
 	[HttpPost]
@@ -82,6 +85,7 @@ public class AuthController: ControllerBase
 		try
 		{
             await _context.SaveChangesAsync();
+			SendOnboardingSuccessEmail(user);
         } catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error adding user to DB");
@@ -141,5 +145,20 @@ public class AuthController: ControllerBase
 		}
 		return Ok(user);
     }
+
+	private void SendOnboardingSuccessEmail(User receiver)
+	{
+		var emailData = new Email
+		{
+			Body = $@"<html><body>Hello <b>{receiver.Name}</b>,<br />
+            <p>Thank you for joining the Bookonnect family! We'll sort your books at an affordable price.</p><br />
+			<p>Regards,<br /> Bookonnect Team.</p></body></html>",
+			Subject = "You are one of US!",
+			ToId = receiver.Email,
+			Name = receiver.Name
+		};
+
+		_mailLibrary.SendMail(emailData);
+	}
 }
 
