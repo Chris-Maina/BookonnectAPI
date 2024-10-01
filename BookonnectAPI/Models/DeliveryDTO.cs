@@ -9,6 +9,7 @@ public class DeliveryDTO
     public string Location { get; set; } = String.Empty;
     public string Phone { get; set; } = String.Empty;
     public string? Instructions { get; set; }
+    public int OrderID { get; set; }
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public DeliveryStatus Status { get; set; }
 }
