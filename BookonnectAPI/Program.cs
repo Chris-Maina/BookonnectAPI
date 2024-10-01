@@ -1,23 +1,30 @@
+
 using BookonnectAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using BookonnectAPI.Lib;
+using BookonnectAPI.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 // Override logging defaults
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
+
 // Add services to DI container.
+builder.Services.Configure<MailSettingsOptions>(builder.Configuration.GetSection(MailSettingsOptions.SectionName));
 builder.Services.AddControllers(options =>
 {
     options.InputFormatters.Insert(0, BookonnectJPIF.GetJsonPatchInputFormatter());
 });
 builder.Services.AddScoped<ITokenLibrary, TokenLibrary>();
 builder.Services.AddScoped<IMpesaLibrary, MpesaLibrary>();
+builder.Services.AddScoped<IMailLibrary, MailLibrary>();
 
 // Connect to DB
 if (builder.Environment.IsDevelopment())
@@ -28,7 +35,7 @@ if (builder.Environment.IsDevelopment())
 }
 else {
     builder.Services.AddDbContext<BookonnectContext>(options =>
-        options.UseMySQL(builder.Configuration.GetConnectionString("AZURE_MYSQL_CONNECTIONSTRING")));
+        options.UseMySQL(builder.Configuration.GetConnectionString("AZURE_MYSQL_CONNECTIONSTRING")!));
 }
 
 // CORS policy
@@ -43,6 +50,7 @@ builder.Services.AddCors(options => {
 });
 
 // Authentication
+builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -66,7 +74,27 @@ builder.Services.AddHttpClient("Safaricom", httpClient =>
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        Description = "JWT Authorization header using the Bearer scheme."
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = JwtBearerDefaults.AuthenticationScheme}
+            },
+            new string[] { }
+        }
+    });
+});
 
 
 var app = builder.Build();
