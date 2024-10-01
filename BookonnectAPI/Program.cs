@@ -10,11 +10,9 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 // Override logging defaults
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-
 
 // Add services to DI container.
 builder.Services.Configure<MailSettingsOptions>(builder.Configuration.GetSection(MailSettingsOptions.SectionName));
