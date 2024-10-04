@@ -20,12 +20,11 @@ public class Delivery
 
     /**
      * Delivery needs to be associated with an owner
-     * Delivery must be associated with an order. A delivery can have multiple orders
+     * A delivery can have multiple orders
      */
     public int UserID { get; set; } // Required foreign key
     public User? user { get; } // Optional reference navigation
-    public int OrderID { get; set; }
-    public ICollection<Order>? Orders { get; } // Optional collection navigation.
+    public ICollection<Order> Orders { get; set; } = new List<Order>(); // Optional collection navigation.
 
     public static DeliveryDTO DeliveryToDTO(Delivery delivery) =>
         new DeliveryDTO
@@ -36,6 +35,5 @@ public class Delivery
             Phone = delivery.Phone,
             Status = delivery.Status,
             Instructions = delivery.Instructions,
-            OrderID = delivery.OrderID
         };
 }
