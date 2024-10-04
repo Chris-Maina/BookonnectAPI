@@ -7,6 +7,7 @@ public class Payment
 
     public int UserID { get; set; } // Required foreign key
     public User? User { get; set; } // Optional reference navigation
+    public int OrderID { get; set; }
     public Order? Order { get; set; } // Optional reference navigation.
 
     public static PaymentDTO PaymentToDTO(Payment payment)
@@ -15,7 +16,8 @@ public class Payment
         {
             ID = payment.ID,
             User = payment.User,
-            DateTime = payment.DateTime
+            DateTime = payment.DateTime,
+            OrderID = payment.OrderID,
         };
     }
 
