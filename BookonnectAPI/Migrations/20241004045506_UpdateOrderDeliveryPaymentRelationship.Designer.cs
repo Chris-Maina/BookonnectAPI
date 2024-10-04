@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookonnectAPI.Migrations
 {
     [DbContext(typeof(BookonnectContext))]
-    [Migration("20240906054620_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20241004045506_UpdateOrderDeliveryPaymentRelationship")]
+    partial class UpdateOrderDeliveryPaymentRelationship
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -165,12 +165,8 @@ namespace BookonnectAPI.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("DeliveryID")
+                    b.Property<int?>("DeliveryID")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("PaymentID")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
 
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
@@ -184,9 +180,6 @@ namespace BookonnectAPI.Migrations
                     b.HasKey("ID");
 
                     b.HasIndex("DeliveryID");
-
-                    b.HasIndex("PaymentID")
-                        .IsUnique();
 
                     b.HasIndex("UserID");
 
@@ -225,10 +218,16 @@ namespace BookonnectAPI.Migrations
                     b.Property<DateTime>("DateTime")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("OrderID")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("UserID")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("ID");
+
+                    b.HasIndex("OrderID")
+                        .IsUnique();
 
                     b.HasIndex("UserID");
 
@@ -308,15 +307,7 @@ namespace BookonnectAPI.Migrations
                 {
                     b.HasOne("BookonnectAPI.Models.Delivery", "Delivery")
                         .WithMany("Orders")
-                        .HasForeignKey("DeliveryID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BookonnectAPI.Models.Payment", "Payment")
-                        .WithOne("Order")
-                        .HasForeignKey("BookonnectAPI.Models.Order", "PaymentID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("DeliveryID");
 
                     b.HasOne("BookonnectAPI.Models.User", "User")
                         .WithMany()
@@ -325,8 +316,6 @@ namespace BookonnectAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("Delivery");
-
-                    b.Navigation("Payment");
 
                     b.Navigation("User");
                 });
@@ -352,11 +341,19 @@ namespace BookonnectAPI.Migrations
 
             modelBuilder.Entity("BookonnectAPI.Models.Payment", b =>
                 {
+                    b.HasOne("BookonnectAPI.Models.Order", "Order")
+                        .WithOne("Payment")
+                        .HasForeignKey("BookonnectAPI.Models.Payment", "OrderID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("BookonnectAPI.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Order");
 
                     b.Navigation("User");
                 });
@@ -374,11 +371,8 @@ namespace BookonnectAPI.Migrations
             modelBuilder.Entity("BookonnectAPI.Models.Order", b =>
                 {
                     b.Navigation("OrderItems");
-                });
 
-            modelBuilder.Entity("BookonnectAPI.Models.Payment", b =>
-                {
-                    b.Navigation("Order");
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.User", b =>
