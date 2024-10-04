@@ -15,10 +15,11 @@ public class Order
 
     /**
      * Order can have multiple OrderItems
-     * Order can have a delivery (dependant)
+     * Order can have a delivery (principal)
      * Order can have a payment(dependant)
     */
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>(); // Optional collection navigation.
+    public int? DeliveryID { get; set; }
     public Delivery? Delivery { get; set; } // optional reference navigation
     public Payment? Payment { get; set; }
 
