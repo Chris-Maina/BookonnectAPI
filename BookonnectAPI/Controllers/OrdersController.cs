@@ -3,6 +3,7 @@ using BookonnectAPI.Data;
 using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -54,6 +55,8 @@ namespace BookonnectAPI.Controllers
                         ord.UserID == int.Parse(userId) &&
                         ord.Status == orderQueryParameters.Status &&
                         ord.Total == orderQueryParameters.Total)
+                    .Include(ord => ord.User)
+                    .Include(ord => ord.Delivery)
                     .Include(ord => ord.OrderItems)
                     .ThenInclude(orderItem => orderItem.Book)
                     .Select(ord => Order.OrderToDTO(ord));
@@ -62,6 +65,7 @@ namespace BookonnectAPI.Controllers
             }
             orders = _context.Orders
                 .Where(ord => ord.UserID == int.Parse(userId))
+                .Include(ord => ord.User)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
                 .Select(ord => Order.OrderToDTO(ord));
@@ -76,7 +80,7 @@ namespace BookonnectAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<OrderDTO>> GetOrder(int id)
         {
-            _logger.LogInformation("Getting orders");
+            _logger.LogInformation("Getting order");
             var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
             {
@@ -91,10 +95,13 @@ namespace BookonnectAPI.Controllers
             }
 
             var order = await _context.Orders
+                .Where(ord => ord.ID == id)
+                .Include(ord => ord.User)
+                .Include(ord => ord.Delivery)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
                 .ThenInclude(book => book != null ? book.Image : null)
-                .FirstOrDefaultAsync(ord => ord.ID == id);
+                .FirstOrDefaultAsync();
 
             if (order == null)
             {
@@ -172,11 +179,98 @@ namespace BookonnectAPI.Controllers
         {
         }
 
+        // PATCH api/<OrdersController>/5
+        [HttpPatch("{id}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> PatchOrder(int id, [FromBody] JsonPatchDocument<Order> patchDoc)
+        {
+            if (patchDoc == null)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null)
+            {
+                return NotFound(new { Message = "Order not found" });
+            }
+
+            patchDoc.ApplyTo(order, ModelState);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            _context.Update(order);
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(Order.OrderToDTO(order));
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogError(ex, "Error saving order to DB");
+                if (!OrderExists(id))
+                {
+                    return NotFound(new { Message = "Order not found" });
+                }
+                else
+                {
+                    return StatusCode(500, ex.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving order to DB");
+                return StatusCode(500, ex.Message);
+            }
+
+        }
+
         // DELETE api/<OrdersController>/5
         [HttpDelete("{id}")]
-        public void DeleteOrder(int id)
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> DeleteOrder(int id)
         {
+            _logger.LogInformation("Getting orders");
+            var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+            {
+                _logger.LogWarning("There is no user id in token");
+                return Unauthorized(new { Message = "Please sign in again." });
+            }
+
+            if (!UserExists(int.Parse(userId)))
+            {
+                _logger.LogWarning("User in token does not exist");
+                return NotFound(new { Message = "User not found. Sign in again." });
+            }
+
+            var order = await _context.Orders.FindAsync(id);
+
+            if (order == null)
+            {
+                return NotFound(new { Message = "Order not found" });
+            }
+
+            _context.Orders.Remove(order);
+            try
+            {
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
+
+        private bool OrderExists(int id) => _context.Orders.Any(u => u.ID == id);
 
         private bool UserExists(int id) => _context.Users.Any(u => u.ID == id);
 
