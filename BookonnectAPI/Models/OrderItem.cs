@@ -1,5 +1,4 @@
-﻿using System;
-namespace BookonnectAPI.Models;
+﻿namespace BookonnectAPI.Models;
 
 public class OrderItem
 {

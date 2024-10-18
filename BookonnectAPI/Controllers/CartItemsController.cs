@@ -207,7 +207,7 @@ namespace BookonnectAPI.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> DeleteCartItem(int id)
+        public async Task<ActionResult> DeleteCartItem(int id)
         {
             _logger.LogInformation("Fetching item to delete");
             var cartItem = await _context.CartItems.FindAsync(id);
