@@ -12,9 +12,7 @@ public enum DeliveryStatus
 public class Delivery
 {
 	public int ID { get; set; }
-    public string Name { get; set; } = String.Empty;
     public string Location { get; set; } = String.Empty;
-    public string Phone { get; set; } = String.Empty;
     public string? Instructions { get; set; }
     public DeliveryStatus Status { get; set; } = DeliveryStatus.OrderPlaced;
 
@@ -23,17 +21,15 @@ public class Delivery
      * A delivery can have multiple orders
      */
     public int UserID { get; set; } // Required foreign key
-    public User? user { get; } // Optional reference navigation
-    public ICollection<Order> Orders { get; set; } = new List<Order>(); // Optional collection navigation.
+    public User? User { get; set; } // Optional reference navigation
+    public ICollection<Order> Orders { get; set; } = new List<Order>(); // Collection navigation.
 
     public static DeliveryDTO DeliveryToDTO(Delivery delivery) =>
         new DeliveryDTO
         {
             ID = delivery.ID,
-            Name = delivery.Name,
             Location = delivery.Location,
-            Phone = delivery.Phone,
             Status = delivery.Status,
-            Instructions = delivery.Instructions,
+            Instructions = delivery.Instructions
         };
 }
