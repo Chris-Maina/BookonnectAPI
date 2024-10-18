@@ -29,6 +29,8 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.7" />
     <PackageReference Include="MySql.EntityFrameworkCore" Version="8.0.5" />
+    <PackageReference Include="MailKit" Version="4.7.1.1" />
+    <PackageReference Include="MimeKit" Version="4.7.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,11 +38,15 @@
     <None Remove="Controllers\" />
     <None Remove="Data\" />
     <None Remove="Lib\" />
+    <None Remove="Configuration\" />
+    <None Remove="Migrations\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\" />
     <Folder Include="Controllers\" />
     <Folder Include="Data\" />
     <Folder Include="Lib\" />
+    <Folder Include="Configuration\" />
+    <Folder Include="Migrations\" />
   </ItemGroup>
 </Project>
