@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using BookonnectAPI.Data;
+using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
@@ -15,11 +16,13 @@ public class DeliveriesController : ControllerBase
 {
     private readonly BookonnectContext _context;
     private readonly ILogger<DeliveriesController> _logger;
-    public DeliveriesController(BookonnectContext context, ILogger<DeliveriesController> logger)
+    private readonly IMailLibrary _mailLibrary;
+    public DeliveriesController(BookonnectContext context, ILogger<DeliveriesController> logger, IMailLibrary mailLibrary)
     {
         _context = context;
         _context.Database.EnsureCreated();
         _logger = logger;
+        _mailLibrary = mailLibrary;
     }
 
     // GET: api/deliveries
@@ -41,7 +44,7 @@ public class DeliveriesController : ControllerBase
             return NotFound(new { Message = "User not found. Sign in again." });
         }
 
-        var deliveries = await _context.Deliveries
+        DeliveryDTO[] deliveries = await _context.Deliveries
             .Where(d => d.UserID == int.Parse(userId))
             .Take(queryParameter.Size)
             .Select(d => Delivery.DeliveryToDTO(d))
@@ -78,7 +81,9 @@ public class DeliveriesController : ControllerBase
             return NotFound(new { Message = "User not found. Sign in again." });
         }
 
-        var deliveryExists = _context.Deliveries.Any(d => d.Name == deliveryDTO.Name && d.Location == deliveryDTO.Location && d.Phone == deliveryDTO.Phone);
+        var deliveryExists = _context.Deliveries.Any(d =>
+            d.Location == deliveryDTO.Location &&
+            d.UserID == int.Parse(userId));
 
         if (deliveryExists)
         {
@@ -86,14 +91,13 @@ public class DeliveriesController : ControllerBase
             return Conflict(new { Message = "Delivery already exists" });
         }
 
+
         _logger.LogInformation("Creating delivery");
         var delivery = new Delivery
         {
-            Name = deliveryDTO.Name,
             Location = deliveryDTO.Location,
-            Phone = deliveryDTO.Phone,
             Instructions = deliveryDTO.Instructions,
-            UserID = int.Parse(userId)
+            UserID = int.Parse(userId),
         };
 
         _context.Deliveries.Add(delivery);
@@ -107,8 +111,6 @@ public class DeliveriesController : ControllerBase
             _logger.LogError(ex, "Error saving delivery to DB");
             return StatusCode(500, ex.Message);
         }
-         
-       
     }
 
     // PUT api/deliveries/5
@@ -119,6 +121,7 @@ public class DeliveriesController : ControllerBase
 
     // PATCH api/deliveries/5
     [HttpPatch("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -130,12 +133,17 @@ public class DeliveriesController : ControllerBase
         }
 
         _logger.LogInformation("Fetching delivery with id {0}", id);
-        var delivery = await _context.Deliveries.FindAsync(id);
+        var delivery = await _context.Deliveries
+             .Include(d => d.User)
+             .FirstOrDefaultAsync(d => d.ID == id);
+
+
         if (delivery == null)
         {
             _logger.LogWarning("Delivery with the specified id {0} not found", id);
             return NotFound(new { Message = "Delivery with provided id does not exist" });
         }
+
 
         patchDocument.ApplyTo(delivery, ModelState);
         if (!ModelState.IsValid)
@@ -147,7 +155,11 @@ public class DeliveriesController : ControllerBase
         try
         {
             await _context.SaveChangesAsync();
-            return new ObjectResult(Delivery.DeliveryToDTO(delivery));
+
+            // Send an email to book owner to deliver book. Details will include location and instructions
+            SendMail(delivery, delivery.User!);
+            // Add a button action to update delivery status once owner has shipped book
+            return Ok(Delivery.DeliveryToDTO(delivery));
         }
         catch (DbUpdateConcurrencyException ex)
         {
@@ -181,5 +193,109 @@ public class DeliveriesController : ControllerBase
     }
 
     private bool UserExists(int id) => _context.Users.Any(user => user.ID == id);
+
+    private async Task<Order?> GetOrder(Delivery delivery)
+    {
+        return await _context.Orders
+                .Where(ord => ord.DeliveryID == delivery.ID)
+                .Include(ord => ord.OrderItems)
+                .ThenInclude(oi => oi.Book)
+                .ThenInclude(b => b != null ? b.User : null)
+                .FirstOrDefaultAsync();
+    }
+
+    private async void SendMail(Delivery delivery, User recipient)
+    {
+        Order? order;
+        switch(delivery.Status)
+        {
+            case DeliveryStatus.OrderConfirmed:
+                order = await GetOrder(delivery);
+                if (order == null)
+                {
+                    break;
+                }
+                // loop through order items to find book owners
+                foreach (OrderItem orderItem in order.OrderItems)
+                {
+                    if (orderItem.Book != null)
+                    {
+                        SendDeliverEmail(orderItem.Book.User, delivery);
+                    }
+                }
+                break;
+            case DeliveryStatus.InTransit:
+                SendInTransitEmail(recipient);
+                break;
+            case DeliveryStatus.Delivered:
+                order = await GetOrder(delivery);
+                if (order == null)
+                {
+                    break;
+                }
+                // loop through order items to find book owners
+                foreach (OrderItem orderItem in order.OrderItems)
+                {
+                    if (orderItem.Book != null)
+                    {
+                        SendDeliverySuccessfulEmail(orderItem.Book.User);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+
+    private void SendDeliverEmail(User owner, Delivery delivery)
+    {
+        var emailData = new Email
+        {
+            ToId = owner.Email,
+            Name = owner.Name,
+            Subject = "Deliver book",
+            Body = $@"<p>Hi {owner.Name},</p>
+                <p>Please deliver the book using the details below:</p>
+                <ul>
+                    <li>To {delivery.User?.Name} </li>
+                    <li>{delivery.Location}</li>
+                    <li>{delivery.Instructions}</li>
+                </ul>"
+        };
+        _mailLibrary.SendMail(emailData);
+    }
+
+    private void SendInTransitEmail(User recipient)
+    {
+        var emailData = new Email
+        {
+            ToId = recipient.Email,
+            Name = recipient.Name,
+            Subject = "Delivery in transit",
+            Body = $@"<p>Hi {recipient.Name},</p>
+                <p>Your book has been dispatched for delivery with the details you provided. Please be patient</p>
+                <p>Warm regards,</p>
+                <p>Bookonnect Team </p>
+                "
+        };
+        _mailLibrary.SendMail(emailData);
+    }
+
+    private void SendDeliverySuccessfulEmail(User owner)
+    {
+        var emailData = new Email
+        {
+            ToId = owner.Email,
+            Name = owner.Name,
+            Subject = "Book delivered!",
+            Body = $@"<p>Hi {owner.Name},</p>
+                <p>The book has been successfully delivered. Payment will be made within 24 hours</p>
+                <p>Warm regards,</p>
+                <p>Bookonnect Team </p>
+                "
+        };
+        _mailLibrary.SendMail(emailData);
+    }
 }
 
