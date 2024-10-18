@@ -1,4 +1,6 @@
-﻿namespace BookonnectAPI.Models;
+﻿using System.Text.Json.Serialization;
+
+namespace BookonnectAPI.Models;
 
 public enum OrderStatus
 {
@@ -14,13 +16,16 @@ public class Order
     public OrderStatus Status { get; set; } = OrderStatus.OrderPlaced;
 
     /**
-     * Order can have multiple OrderItems
-     * Order can have a delivery (principal)
-     * Order can have a payment(dependant)
+     * Order can have multiple OrderItems i.e. Optional collection navigation.
+     * Order can have a delivery (principal) i.e. Optional reference navigation
+     * Order can have a payment (dependant) i.e Optional reference navigation
+     * Adding JsonIgnore attribute on OrderItems and Delivery to avoid cycles
     */
-    public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>(); // Optional collection navigation.
+    [JsonIgnore]
+    public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     public int? DeliveryID { get; set; }
-    public Delivery? Delivery { get; set; } // optional reference navigation
+    [JsonIgnore]
+    public Delivery? Delivery { get; set; }
     public Payment? Payment { get; set; }
 
 
@@ -37,6 +42,9 @@ public class Order
         ID = order.ID,
         Total = order.Total,
         Status = order.Status,
+        UserID = order.UserID,
+        User = order.User,
+        Delivery = order.Delivery ?? null,
         OrderItems = order.OrderItems.Select(OrderItem.OrderItemToDTO).ToList(),
     };
 }
