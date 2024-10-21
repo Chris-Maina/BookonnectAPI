@@ -32,7 +32,7 @@ public class PaymentsController : ControllerBase
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -52,18 +52,19 @@ public class PaymentsController : ControllerBase
         }
 
         var existingPayment = await _context.Payments
-            .Where(p => p.ID == paymentDTO.ID && p.Order == null)
+            .Where(p => p.ID == paymentDTO.ID && p.OrderID == paymentDTO.OrderID && p.UserID == int.Parse(userId))
             .Include(p => p.User)
             .FirstOrDefaultAsync();
          
-        if (existingPayment != null)
+        if (PaymentExists(paymentDTO.ID, paymentDTO.OrderID, int.Parse(userId)))
         {
             _logger.LogInformation("Found an existing payment with the ID {0}", paymentDTO.ID);
-            return Ok(Payment.PaymentToDTO(existingPayment));
+            return Conflict(new { Message = "Payment already exists" });
         }
 
         try
         {
+            // Add token in cache with user id as key. If expired refetch
             _logger.LogInformation("Fetching MPESA access token");
             MpesaAuthToken? tokenResponse = await _mpesaLibrary.GetMpesaAuthToken();
 
@@ -99,7 +100,8 @@ public class PaymentsController : ControllerBase
         {
             ID = paymentDTO.ID,
             UserID = int.Parse(userId),
-            DateTime = DateTime.Now
+            DateTime = DateTime.Now,
+            OrderID = paymentDTO.OrderID
         };
         _context.Payments.Add(payment);
 
@@ -127,4 +129,6 @@ public class PaymentsController : ControllerBase
     }
 
     private bool UserExists(int id) => _context.Users.Any(user => user.ID == id);
+
+    private bool PaymentExists(string id, int orderID, int userID) => _context.Payments.Any(p => p.ID == id && p.OrderID == orderID && p.UserID == userID);
 }
