@@ -261,7 +261,9 @@ public class DeliveriesController : ControllerBase
                     <li>To {delivery.User?.Name} </li>
                     <li>{delivery.Location}</li>
                     <li>{delivery.Instructions}</li>
-                </ul>"
+                </ul>
+                <p>Warm regards,</p>
+                <p>Bookonnect Team </p>"
         };
         _mailLibrary.SendMail(emailData);
     }
