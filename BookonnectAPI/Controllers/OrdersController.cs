@@ -67,8 +67,8 @@ namespace BookonnectAPI.Controllers
             orders = _context.Orders
                 .Where(ord => ord.UserID == int.Parse(userId))
                 .Include(ord => ord.User)
-                .Include(ord => ord.Delivery)
                 .Include(ord => ord.Payment)
+                .Include(ord => ord.Delivery)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
                 .Select(ord => Order.OrderToDTO(ord));
