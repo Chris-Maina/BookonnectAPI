@@ -6,7 +6,7 @@ public enum OrderStatus
 {
     OrderPlaced, // checkout started and order registered
 	OrderConfirmed, // payment made
-	OrderProcessing, // order is being readied for shipment.Owner of the book is preparing to ship having received a notification
+	OrderShipped, // Owner of the book has shipped/sent the book
     Canceled, // Order does not go through due to reasons like stock issues or payment problems
 };
 public class Order
@@ -46,6 +46,7 @@ public class Order
         User = order.User,
         Delivery = order.Delivery ?? null,
         OrderItems = order.OrderItems.Select(OrderItem.OrderItemToDTO).ToList(),
+        Payment = order.Payment ?? null
     };
 }
 

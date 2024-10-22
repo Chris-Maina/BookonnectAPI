@@ -12,5 +12,6 @@ public class OrderDTO
     public int UserID { get; set; }
     public User? User { get; set; }
     public Delivery? Delivery { get; set; }
+    public Payment? Payment { get; set; }
 }
 
