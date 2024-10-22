@@ -12,9 +12,7 @@ public class Book
     public int UserID { get; set; } // Required foreign key property. Indicates the owner of the book
     public User User { get; set; } = null!; // Required reference navigation. A book cannot exist without an owner
 
-    public int? OrderId { get; set; } // Optional foreign key property
-    public Order? Order { get;  }  // Optional reference navigation. A book does not need to be associated with an Order
-
+    public OrderItem? OrderItem { get; set; }  // Optional reference navigation. A book does not need to be associated with an OrderItem
     public Image? Image { get; set; } // Optional reference navigation. A book exist without an image.
 
     public static BookDTO BookToDTO(Book book) =>
@@ -31,6 +29,7 @@ public class Book
                 ID = book.Image.ID,
                 PublicId = book.Image.PublicId,
                 Url = book.Image.Url,
-            }
+            },
+            OrderItem = book.OrderItem ?? null,
         };
 }

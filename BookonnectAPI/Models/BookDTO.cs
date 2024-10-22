@@ -1,5 +1,4 @@
-﻿using System;
-namespace BookonnectAPI.Models;
+﻿namespace BookonnectAPI.Models;
 
 public class BookDTO
 {
@@ -11,5 +10,6 @@ public class BookDTO
     public string? Description { get; set; }
 
     public ImageDTO? Image { get; set; }
+    public OrderItem? OrderItem { get; set; }
 }
 
