@@ -1,4 +1,6 @@
-﻿namespace BookonnectAPI.Models;
+﻿using System.Text.Json.Serialization;
+
+namespace BookonnectAPI.Models;
 
 public class Payment
 {
@@ -8,6 +10,7 @@ public class Payment
     public int UserID { get; set; } // Required foreign key
     public User? User { get; set; } // Optional reference navigation
     public int OrderID { get; set; }
+    [JsonIgnore]
     public Order? Order { get; set; } // Optional reference navigation.
 
     public static PaymentDTO PaymentToDTO(Payment payment)
