@@ -109,6 +109,7 @@ public class BooksController: ControllerBase
         var books = await _context.Books
                 .Where(b => b.UserID == int.Parse(userId))
                 .Include(b => b.Image)
+                .Include(b => b.OrderItem)
                 .Select(b => Book.BookToDTO(b))
                 .ToArrayAsync();
 
