@@ -7,6 +7,7 @@ public enum OrderStatus
     OrderPlaced, // checkout started and order registered
 	OrderConfirmed, // payment made
 	OrderShipped, // Owner of the book has shipped/sent the book
+    OrderCompleted, // Recipient has received the book and transaction completed successful
     Canceled, // Order does not go through due to reasons like stock issues or payment problems
 };
 public class Order
