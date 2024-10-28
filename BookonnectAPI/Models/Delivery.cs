@@ -8,7 +8,7 @@ public enum DeliveryStatus
     OrderConfirmed, // user has completed checkout, owner of books has received payment and is preparing to ship
     InTransit, // package is moving between locations or on its way to the recipient
     Delivered, // customer has successfully received the package
-    Delayed // External factors like weather or operational challenges have postponed the delivery
+    NotDelivered // customer has not received the package
 }
 
 public class Delivery
