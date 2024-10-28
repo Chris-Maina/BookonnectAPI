@@ -196,7 +196,12 @@ namespace BookonnectAPI.Controllers
                 return BadRequest(ModelState);
             }
 
-            var order = await _context.Orders.FindAsync(id);
+            var order = await _context.Orders
+                .Where(ord => ord.ID == id)
+                .Include(ord => ord.User)
+                .Include(ord => ord.Delivery)
+                .Include(ord => ord.Payment)
+                .FirstOrDefaultAsync();
             if (order == null)
             {
                 return NotFound(new { Message = "Order not found" });
