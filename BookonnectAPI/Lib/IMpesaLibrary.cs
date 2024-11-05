@@ -6,5 +6,6 @@ public interface IMpesaLibrary
 {
     public Task<MpesaAuthToken?> GetMpesaAuthToken();
     public Task<TransactionStatusResponse?> GetTransactionStatusResponse(string transactionID, string accessToken);
+    public Task<TransactionStatusResponse?> MakeBusinessPayment(string amount, string recipientPhoneNumber, string accessToken, int orderID);
 }
 
