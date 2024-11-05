@@ -57,7 +57,7 @@ namespace BookonnectAPI.Controllers
                         ord.Total == orderQueryParameters.Total)
                     .Include(ord => ord.User)
                     .Include(ord => ord.Delivery)
-                    .Include(ord => ord.Payment)
+                    .Include(ord => ord.Payments)
                     .Include(ord => ord.OrderItems)
                     .ThenInclude(orderItem => orderItem.Book)
                     .Select(ord => Order.OrderToDTO(ord));
@@ -67,7 +67,7 @@ namespace BookonnectAPI.Controllers
             orders = _context.Orders
                 .Where(ord => ord.UserID == int.Parse(userId))
                 .Include(ord => ord.User)
-                .Include(ord => ord.Payment)
+                .Include(ord => ord.Payments)
                 .Include(ord => ord.Delivery)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
@@ -101,7 +101,7 @@ namespace BookonnectAPI.Controllers
                 .Where(ord => ord.ID == id)
                 .Include(ord => ord.User)
                 .Include(ord => ord.Delivery)
-                .Include(ord => ord.Payment)
+                .Include(ord => ord.Payments)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
                 .ThenInclude(book => book != null ? book.Image : null)
@@ -139,7 +139,7 @@ namespace BookonnectAPI.Controllers
                 return NotFound(new { Message = "User not found. Sign in again." });
             }
 
-            bool orderExists = _context.Orders.Any(ord => ord.Total == orderDTO.Total && ord.Status == orderDTO.Status && ord.User.ID == int.Parse(userId));
+            bool orderExists = _context.Orders.Any(ord => ord.Total == orderDTO.Total && ord.Status == orderDTO.Status && ord.User.ID == user.ID);
             if (orderExists)
             {
                 _logger.LogWarning("Order exists");
@@ -152,15 +152,17 @@ namespace BookonnectAPI.Controllers
                 Status = orderDTO.Status,
                 Total = orderDTO.Total,
                 OrderItems = orderDTO.OrderItems
-                    .Select(orderItemDTO =>
-                        new OrderItem {
-                            Quantity = orderItemDTO.Quantity,
-                            BookID = orderItemDTO.BookID
-                        })
-                    .ToList(),
+                   .Select(orderItemDTO =>
+                       new OrderItem
+                       {
+                           Quantity = orderItemDTO.Quantity,
+                           BookID = orderItemDTO.BookID
+                       })
+                   .ToList(),
             };
 
             _context.Orders.Add(order);
+
             try
             {
                 _logger.LogInformation("Saving order to database");
@@ -174,7 +176,6 @@ namespace BookonnectAPI.Controllers
                 _logger.LogError(ex, "Error creating order");
                 return StatusCode(500, ex.Message);
             }
-
         }
 
         // PUT api/<OrdersController>/5
@@ -200,7 +201,7 @@ namespace BookonnectAPI.Controllers
                 .Where(ord => ord.ID == id)
                 .Include(ord => ord.User)
                 .Include(ord => ord.Delivery)
-                .Include(ord => ord.Payment)
+                .Include(ord => ord.Payments)
                 .FirstOrDefaultAsync();
             if (order == null)
             {
@@ -246,7 +247,7 @@ namespace BookonnectAPI.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> DeleteOrder(int id)
         {
-            _logger.LogInformation("Getting orders");
+            _logger.LogInformation("Deleting order");
             var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
             {

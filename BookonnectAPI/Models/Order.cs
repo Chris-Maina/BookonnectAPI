@@ -19,7 +19,7 @@ public class Order
     /**
      * Order can have multiple OrderItems i.e. Optional collection navigation.
      * Order can have a delivery (principal) i.e. Optional reference navigation
-     * Order can have a payment (dependant) i.e Optional reference navigation
+     * Order can have a multiple payments (dependant) i.e Optional collection navigation
      * Adding JsonIgnore attribute on OrderItems and Delivery to avoid cycles
     */
     [JsonIgnore]
@@ -27,7 +27,7 @@ public class Order
     public int? DeliveryID { get; set; }
     [JsonIgnore]
     public Delivery? Delivery { get; set; }
-    public Payment? Payment { get; set; }
+    public ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
 
     /**
@@ -47,7 +47,7 @@ public class Order
         User = order.User,
         Delivery = order.Delivery ?? null,
         OrderItems = order.OrderItems.Select(OrderItem.OrderItemToDTO).ToList(),
-        Payment = order.Payment ?? null
+        Payments = order.Payments
     };
 }
 
