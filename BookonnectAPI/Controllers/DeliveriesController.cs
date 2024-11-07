@@ -197,7 +197,6 @@ public class DeliveriesController : ControllerBase
     private async Task<Order?> GetOrder(Delivery delivery)
     {
         return await _context.Orders
-                .Where(ord => ord.DeliveryID == delivery.ID)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(oi => oi.Book)
                 .ThenInclude(b => b != null ? b.Vendor : null)

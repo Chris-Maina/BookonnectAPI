@@ -24,8 +24,6 @@ public class Delivery
      */
     public int UserID { get; set; } // Required foreign key
     public User? User { get; set; } // Optional reference navigation
-    [JsonIgnore]
-    public ICollection<Order> Orders { get; set; } = new List<Order>(); // Collection navigation.
 
     public static DeliveryDTO DeliveryToDTO(Delivery delivery) =>
         new DeliveryDTO

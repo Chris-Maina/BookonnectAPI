@@ -15,18 +15,16 @@ public class Order
 	public int ID { get; set; }
 	public float Total { get; set; }
     public OrderStatus Status { get; set; } = OrderStatus.OrderPlaced;
+    public string DeliveryLocation { get; set; } = String.Empty;
+    public string? DeliveryInstructions { get; set; }
 
     /**
      * Order can have multiple OrderItems i.e. Optional collection navigation.
-     * Order can have a delivery (principal) i.e. Optional reference navigation
      * Order can have a multiple payments (dependant) i.e Optional collection navigation
      * Adding JsonIgnore attribute on OrderItems and Delivery to avoid cycles
     */
     [JsonIgnore]
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-    public int? DeliveryID { get; set; }
-    [JsonIgnore]
-    public Delivery? Delivery { get; set; }
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
 
@@ -43,9 +41,10 @@ public class Order
         ID = order.ID,
         Total = order.Total,
         Status = order.Status,
+        DeliveryLocation = order.DeliveryLocation,
+        DeliveryInstructions = order.DeliveryInstructions,
         CustomerID = order.CustomerID,
         Customer = order.Customer,
-        Delivery = order.Delivery ?? null,
         OrderItems = order.OrderItems.Select(OrderItem.OrderItemToDTO).ToList(),
         Payments = order.Payments
     };

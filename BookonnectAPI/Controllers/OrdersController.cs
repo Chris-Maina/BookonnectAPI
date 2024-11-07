@@ -56,7 +56,6 @@ namespace BookonnectAPI.Controllers
                         ord.Status == orderQueryParameters.Status &&
                         ord.Total == orderQueryParameters.Total)
                     .Include(ord => ord.Customer)
-                    .Include(ord => ord.Delivery)
                     .Include(ord => ord.Payments)
                     .Include(ord => ord.OrderItems)
                     .ThenInclude(orderItem => orderItem.Book)
@@ -68,7 +67,6 @@ namespace BookonnectAPI.Controllers
                 .Where(ord => ord.CustomerID == int.Parse(userId))
                 .Include(ord => ord.Customer)
                 .Include(ord => ord.Payments)
-                .Include(ord => ord.Delivery)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
                 .Select(ord => Order.OrderToDTO(ord));
@@ -100,7 +98,6 @@ namespace BookonnectAPI.Controllers
             var order = await _context.Orders
                 .Where(ord => ord.ID == id)
                 .Include(ord => ord.Customer)
-                .Include(ord => ord.Delivery)
                 .Include(ord => ord.Payments)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
@@ -200,7 +197,6 @@ namespace BookonnectAPI.Controllers
             var order = await _context.Orders
                 .Where(ord => ord.ID == id)
                 .Include(ord => ord.Customer)
-                .Include(ord => ord.Delivery)
                 .Include(ord => ord.Payments)
                 .FirstOrDefaultAsync();
             if (order == null)
