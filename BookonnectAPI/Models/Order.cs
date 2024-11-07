@@ -2,19 +2,10 @@
 
 namespace BookonnectAPI.Models;
 
-public enum OrderStatus
-{
-    OrderPlaced, // checkout started and order registered
-	OrderConfirmed, // payment made
-	OrderShipped, // Owner of the book has shipped/sent the book
-    OrderCompleted, // Recipient has received the book and transaction completed successful
-    Canceled, // Order does not go through due to reasons like stock issues or payment problems
-};
 public class Order
 {
 	public int ID { get; set; }
 	public float Total { get; set; }
-    public OrderStatus Status { get; set; } = OrderStatus.OrderPlaced;
     public string DeliveryLocation { get; set; } = String.Empty;
     public string? DeliveryInstructions { get; set; }
 
@@ -40,7 +31,6 @@ public class Order
     {
         ID = order.ID,
         Total = order.Total,
-        Status = order.Status,
         DeliveryLocation = order.DeliveryLocation,
         DeliveryInstructions = order.DeliveryInstructions,
         CustomerID = order.CustomerID,
