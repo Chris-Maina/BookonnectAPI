@@ -35,16 +35,16 @@ public class Order
      * An order must be associated with a customer/user
      * 
      */
-    public int UserID { get; set; }
-	public User User { get; set; } = null!;
+    public int CustomerID { get; set; }
+	public User Customer { get; set; } = null!;
 
     public static OrderDTO OrderToDTO(Order order) => new OrderDTO
     {
         ID = order.ID,
         Total = order.Total,
         Status = order.Status,
-        UserID = order.UserID,
-        User = order.User,
+        CustomerID = order.CustomerID,
+        Customer = order.Customer,
         Delivery = order.Delivery ?? null,
         OrderItems = order.OrderItems.Select(OrderItem.OrderItemToDTO).ToList(),
         Payments = order.Payments

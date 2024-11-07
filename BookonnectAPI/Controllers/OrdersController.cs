@@ -52,10 +52,10 @@ namespace BookonnectAPI.Controllers
             {
                 orders = _context.Orders
                     .Where(ord =>
-                        ord.UserID == int.Parse(userId) &&
+                        ord.CustomerID == int.Parse(userId) &&
                         ord.Status == orderQueryParameters.Status &&
                         ord.Total == orderQueryParameters.Total)
-                    .Include(ord => ord.User)
+                    .Include(ord => ord.Customer)
                     .Include(ord => ord.Delivery)
                     .Include(ord => ord.Payments)
                     .Include(ord => ord.OrderItems)
@@ -65,8 +65,8 @@ namespace BookonnectAPI.Controllers
                 return Ok(await orders.ToArrayAsync());
             }
             orders = _context.Orders
-                .Where(ord => ord.UserID == int.Parse(userId))
-                .Include(ord => ord.User)
+                .Where(ord => ord.CustomerID == int.Parse(userId))
+                .Include(ord => ord.Customer)
                 .Include(ord => ord.Payments)
                 .Include(ord => ord.Delivery)
                 .Include(ord => ord.OrderItems)
@@ -99,7 +99,7 @@ namespace BookonnectAPI.Controllers
 
             var order = await _context.Orders
                 .Where(ord => ord.ID == id)
-                .Include(ord => ord.User)
+                .Include(ord => ord.Customer)
                 .Include(ord => ord.Delivery)
                 .Include(ord => ord.Payments)
                 .Include(ord => ord.OrderItems)
@@ -139,7 +139,7 @@ namespace BookonnectAPI.Controllers
                 return NotFound(new { Message = "User not found. Sign in again." });
             }
 
-            bool orderExists = _context.Orders.Any(ord => ord.Total == orderDTO.Total && ord.Status == orderDTO.Status && ord.User.ID == user.ID);
+            bool orderExists = _context.Orders.Any(ord => ord.Total == orderDTO.Total && ord.Status == orderDTO.Status && ord.Customer.ID == user.ID);
             if (orderExists)
             {
                 _logger.LogWarning("Order exists");
@@ -148,7 +148,7 @@ namespace BookonnectAPI.Controllers
 
             var order = new Order
             {
-                UserID = user.ID,
+                CustomerID = user.ID,
                 Status = orderDTO.Status,
                 Total = orderDTO.Total,
                 OrderItems = orderDTO.OrderItems
@@ -199,7 +199,7 @@ namespace BookonnectAPI.Controllers
 
             var order = await _context.Orders
                 .Where(ord => ord.ID == id)
-                .Include(ord => ord.User)
+                .Include(ord => ord.Customer)
                 .Include(ord => ord.Delivery)
                 .Include(ord => ord.Payments)
                 .FirstOrDefaultAsync();
