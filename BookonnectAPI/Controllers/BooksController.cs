@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using BookonnectAPI.Data;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -56,7 +55,7 @@ public class BooksController: ControllerBase
             ISBN = bookDTO.ISBN,
             Price = bookDTO.Price,
             Description = bookDTO.Description,
-            UserID = int.Parse(userId),
+            VendorID = int.Parse(userId),
         };
 
         _context.Books.Add(book);
@@ -107,7 +106,7 @@ public class BooksController: ControllerBase
         }
 
         var books = await _context.Books
-                .Where(b => b.UserID == int.Parse(userId))
+                .Where(b => b.VendorID == int.Parse(userId))
                 .Include(b => b.Image)
                 .Include(b => b.OrderItem)
                 .Select(b => Book.BookToDTO(b))

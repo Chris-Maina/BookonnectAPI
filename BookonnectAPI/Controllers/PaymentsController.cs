@@ -162,7 +162,7 @@ public class PaymentsController : ControllerBase
             .Where(ord => ord.ID == paymentDTO.OrderID)
             .Include(ord => ord.OrderItems)
             .ThenInclude(ordItem => ordItem.Book)
-            .ThenInclude(bk => bk != null ? bk.User : null)
+            .ThenInclude(bk => bk != null ? bk.Vendor : null)
             .FirstOrDefaultAsync();
 
         if (order == null)
@@ -192,14 +192,14 @@ public class PaymentsController : ControllerBase
 
         foreach (var orderItem in order.OrderItems)
         {
-            if (PaymentExists(null, order.ID, orderItem.Book?.UserID))
+            if (PaymentExists(null, order.ID, orderItem.Book?.VendorID))
             {
                 return Conflict(new { Message = "Payment already made to book owner " });
             }
 
             _logger.LogInformation("Making B2C request");
             var amount = orderItem.Quantity * orderItem.Book?.Price;
-            TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.MakeBusinessPayment(amount.ToString()!, orderItem.Book?.User.Phone!, tokenResponse.AccessToken, paymentDTO.OrderID);
+            TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.MakeBusinessPayment(amount.ToString()!, orderItem.Book?.Vendor.Phone!, tokenResponse.AccessToken, paymentDTO.OrderID);
 
             if (transactionStatusResponse == null)
             {

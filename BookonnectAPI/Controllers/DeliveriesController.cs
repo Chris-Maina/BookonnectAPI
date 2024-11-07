@@ -200,7 +200,7 @@ public class DeliveriesController : ControllerBase
                 .Where(ord => ord.DeliveryID == delivery.ID)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(oi => oi.Book)
-                .ThenInclude(b => b != null ? b.User : null)
+                .ThenInclude(b => b != null ? b.Vendor : null)
                 .FirstOrDefaultAsync();
     }
 
@@ -220,7 +220,7 @@ public class DeliveriesController : ControllerBase
                 {
                     if (orderItem.Book != null)
                     {
-                        SendDeliverEmail(orderItem.Book.User, delivery);
+                        SendDeliverEmail(orderItem.Book.Vendor, delivery);
                     }
                 }
                 break;
@@ -238,7 +238,7 @@ public class DeliveriesController : ControllerBase
                 {
                     if (orderItem.Book != null)
                     {
-                        SendDeliverySuccessfulEmail(orderItem.Book.User);
+                        SendDeliverySuccessfulEmail(orderItem.Book.Vendor);
                     }
                 }
                 break;

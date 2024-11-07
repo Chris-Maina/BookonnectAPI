@@ -9,8 +9,8 @@ public class Book
     public float Price { get; set; }
     public string? Description { get; set; }
 
-    public int UserID { get; set; } // Required foreign key property. Indicates the owner of the book
-    public User User { get; set; } = null!; // Required reference navigation. A book cannot exist without an owner
+    public int VendorID { get; set; } // Required foreign key property. Indicates the owner/vendor of the book
+    public User Vendor { get; set; } = null!; // Required reference navigation. A book cannot exist without an owner
 
     public OrderItem? OrderItem { get; set; }  // Optional reference navigation. A book does not need to be associated with an OrderItem
     public Image? Image { get; set; } // Optional reference navigation. A book exist without an image.
