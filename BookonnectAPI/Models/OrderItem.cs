@@ -11,8 +11,8 @@ public class OrderItem
     [JsonIgnore]
     public Book? Book { get; set; }
 
-    public int OrderID { get; set; } // Required foreign key reference. An order item cannot exist without an order
-	public Order? Order { get; set; } // Optional reference navigation
+    public int OrderVendorID { get; set; } // Required foreign key reference. An order item cannot exist without an order vendor
+	public OrderVendor? OrderVendor { get; set; } // Optional reference navigation
 
 	public static OrderItemDTO OrderItemToDTO(OrderItem orderItem)
 	{
