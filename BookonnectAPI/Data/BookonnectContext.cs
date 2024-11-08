@@ -16,7 +16,6 @@ public class BookonnectContext: DbContext
     public DbSet<Image> Images { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<Payment> Payments { get; set; }
-	public DbSet<Delivery> Deliveries { get; set; }
 	public DbSet<CartItem> CartItems { get; set; }
 }
 
