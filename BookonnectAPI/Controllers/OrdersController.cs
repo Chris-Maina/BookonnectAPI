@@ -48,7 +48,7 @@ namespace BookonnectAPI.Controllers
 
             _logger.LogInformation("Fetching orders by logged in user");
             IQueryable<OrderDTO> orders;
-            if (orderQueryParameters.Status != null && orderQueryParameters.Total != null)
+            if (orderQueryParameters.Total != null)
             {
                 orders = _context.Orders
                     .Where(ord =>
