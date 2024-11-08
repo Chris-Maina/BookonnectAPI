@@ -8,6 +8,7 @@ public class Order
 	public float Total { get; set; }
     public string DeliveryLocation { get; set; } = String.Empty;
     public string? DeliveryInstructions { get; set; }
+    public DateTime DateTime { get; set; }  
 
     /**
      * Order can have multiple OrderItems i.e. Optional collection navigation.
@@ -25,12 +26,13 @@ public class Order
      * 
      */
     public int CustomerID { get; set; }
-	public User Customer { get; set; } = null!;
+	public User? Customer { get; set; }
 
     public static OrderDTO OrderToDTO(Order order) => new OrderDTO
     {
         ID = order.ID,
         Total = order.Total,
+        DateTime = order.DateTime,
         DeliveryLocation = order.DeliveryLocation,
         DeliveryInstructions = order.DeliveryInstructions,
         CustomerID = order.CustomerID,

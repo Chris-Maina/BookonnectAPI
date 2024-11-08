@@ -6,9 +6,9 @@ public class OrderDTO
 {
 	public int ID { get; set; }
 	public float Total { get; set; }
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public string DeliveryLocation { get; set; } = String.Empty;
     public string? DeliveryInstructions { get; set; }
+    public DateTime DateTime { get; set; }
     public ICollection<OrderItemDTO> OrderItems { get; set; } = new List<OrderItemDTO>();
     public int CustomerID { get; set; }
     public User? Customer { get; set; }

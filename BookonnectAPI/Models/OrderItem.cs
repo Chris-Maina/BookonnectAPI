@@ -7,14 +7,23 @@ public class OrderItem
 	public int ID { get; set; }
 	public int Quantity { get; set; }
 
-    public int BookID { get; set; } // Required foreign key reference. An order item is related to one product.
+    /**
+	 * OrderItem must be associated with a Book, Order and Customer
+	 * We've added Customer to enable both Vendor and Customer to confirm dispatch and receipt
+	 * The reference navigations for each of the above relations can be options
+	 */
+    public int BookID { get; set; }
     [JsonIgnore]
     public Book? Book { get; set; }
 
-    public int OrderVendorID { get; set; } // Required foreign key reference. An order item cannot exist without an order vendor
-	public OrderVendor? OrderVendor { get; set; } // Optional reference navigation
+    public int OrderID { get; set; }
+	public Order? Order { get; set; }
 
-	public static OrderItemDTO OrderItemToDTO(OrderItem orderItem)
+    public int CustomerID { get; set; }
+    public User? Customer { get; set; }
+
+
+    public static OrderItemDTO OrderItemToDTO(OrderItem orderItem)
 	{
 		return new OrderItemDTO
 		{
