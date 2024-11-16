@@ -8,8 +8,8 @@ public class BookDTO
     public string ISBN { get; set; } = string.Empty;
     public float Price { get; set; }
     public string? Description { get; set; }
-
+    public int VendorID { get; set; }
+    public UserDTO? Vendor { get; set; }
     public ImageDTO? Image { get; set; }
-    public OrderItem? OrderItem { get; set; }
 }
 

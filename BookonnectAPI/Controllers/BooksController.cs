@@ -77,6 +77,7 @@ public class BooksController: ControllerBase
         var books = await _context.Books
                 .OrderBy(b => b.ID)
                 .Include(b => b.Image)
+                .Include(b => b.Vendor)
                 .Select(b => Book.BookToDTO(b))
                 .Skip(queryParameter.Size * (queryParameter.Page - 1))
                 .Take(queryParameter.Size)
@@ -108,7 +109,7 @@ public class BooksController: ControllerBase
         var books = await _context.Books
                 .Where(b => b.VendorID == int.Parse(userId))
                 .Include(b => b.Image)
-                .Include(b => b.OrderItem)
+                .Include(b => b.Vendor)
                 .Select(b => Book.BookToDTO(b))
                 .ToArrayAsync();
 
@@ -121,7 +122,11 @@ public class BooksController: ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<BookDTO>> GetBook(int id)
     {
-        var book = await _context.Books.Include(b => b.Image).FirstOrDefaultAsync(b => b.ID == id);
+        var book = await _context.Books
+            .Where(b => b.ID == id)
+            .Include(b => b.Image)
+            .Include(b => b.Vendor)
+            .FirstOrDefaultAsync();
 
         if (book == null)
         {
@@ -193,7 +198,7 @@ public class BooksController: ControllerBase
             return BadRequest(ModelState);
         }
 
-        var book = await _context.Books.FindAsync(id);
+        var book = await _context.Books.Where(b => b.ID == id).Include(b => b.Vendor).FirstOrDefaultAsync();
         if (book == null)
         {
             return NotFound(new { Message = "Book not found." });
