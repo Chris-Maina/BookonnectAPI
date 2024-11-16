@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using System.Threading.Tasks;
 using BookonnectAPI.Data;
 using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
@@ -129,7 +128,7 @@ public class AuthController: ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<User>> GetAuthenticatedUser()
+    public async Task<ActionResult<UserDTO>> GetAuthenticatedUser()
 	{
 		var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -143,7 +142,8 @@ public class AuthController: ControllerBase
 		{
 			return NotFound(new { Message = "User not found. Sign in again." });
 		}
-		return Ok(user);
+
+		return Ok(Models.User.UserToDTO(user));
     }
 
 	private void SendOnboardingSuccessEmail(User receiver)

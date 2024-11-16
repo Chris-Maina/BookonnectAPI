@@ -10,4 +10,18 @@ public class User
     public string? Location { get; set; }
 
     public ICollection<Book>? Books { get; } // Optional collection navigation. A user does not need to be associated with books
+
+    public static UserDTO UserToDTO(User user)
+    {
+        return new UserDTO
+        {
+            ID = user.ID,
+            Name = user.Name,
+            Email = user.Email,
+            Image = user.Image,
+            Phone = user.Phone,
+            Location = user.Location
+        };
+    }
 }
+
