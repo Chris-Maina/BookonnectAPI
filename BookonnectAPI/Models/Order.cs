@@ -13,7 +13,7 @@ public class Order
     /**
      * Order can have multiple OrderItems i.e. Optional collection navigation.
      * Order can have a multiple payments (dependant) i.e Optional collection navigation
-     * Adding JsonIgnore attribute on OrderItems and Delivery to avoid cycles
+     * Adding JsonIgnore attribute on OrderItems to avoid cycles
     */
     [JsonIgnore]
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
@@ -26,7 +26,7 @@ public class Order
      * 
      */
     public int CustomerID { get; set; }
-	public User? Customer { get; set; }
+    public User? Customer { get; set; }
 
     public static OrderDTO OrderToDTO(Order order) => new OrderDTO
     {
