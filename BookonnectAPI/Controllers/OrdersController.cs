@@ -46,31 +46,33 @@ namespace BookonnectAPI.Controllers
                 return NotFound(new { Message = "User not found. Sign in again." });
             }
 
-            _logger.LogInformation("Fetching orders by logged in user");
-            IQueryable<OrderDTO> orders;
-            if (orderQueryParameters.Total != null)
+           
+            OrderDTO[] orders;
+            if (orderQueryParameters.Total != null && orderQueryParameters.BookID != null)
             {
-                orders = _context.Orders
-                    .Where(ord =>
-                        ord.CustomerID == int.Parse(userId) &&
-                        ord.Total == orderQueryParameters.Total)
-                    .Include(ord => ord.Customer)
-                    .Include(ord => ord.Payments)
-                    .Include(ord => ord.OrderItems)
-                    .ThenInclude(orderItem => orderItem.Book)
-                    .Select(ord => Order.OrderToDTO(ord));
+                _logger.LogInformation("Fetching orders by logged in user and query params Total and BookID");
+                orders = await _context.Orders
+                    .Where(ord => ord.CustomerID == int.Parse(userId))
+                    .Where(ord => ord.Total == orderQueryParameters.Total)
+                    .Where(ord => ord.OrderItems.Select(orderItem => orderItem.BookID).Intersect(orderQueryParameters.BookID).Count() == orderQueryParameters.BookID.Count())
+                    .Select(ord => Order.OrderToDTO(ord))
+                    .ToArrayAsync();
 
-                return Ok(await orders.ToArrayAsync());
+                return Ok(orders);
             }
-            orders = _context.Orders
+            _logger.LogInformation("Fetching orders by logged in user");
+            orders = await _context.Orders
                 .Where(ord => ord.CustomerID == int.Parse(userId))
-                .Include(ord => ord.Customer)
                 .Include(ord => ord.Payments)
                 .Include(ord => ord.OrderItems)
+                .ThenInclude(orderItem => orderItem.Confirmations)
+                .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                .Select(ord => Order.OrderToDTO(ord));
+                .ThenInclude(bk => bk.Vendor)
+                .Select(ord => Order.OrderToDTO(ord))
+                .ToArrayAsync();
 
-            return Ok(await orders.ToArrayAsync());
+            return Ok(orders);
         }
 
         // GET api/<OrdersController>/5
@@ -101,6 +103,9 @@ namespace BookonnectAPI.Controllers
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
                 .ThenInclude(book => book != null ? book.Image : null)
+                .Include(ord => ord.OrderItems)
+                .ThenInclude(orderItem => orderItem.Book)
+                .ThenInclude(book => book != null ? book.Vendor : null)
                 .FirstOrDefaultAsync();
 
             if (order == null)
@@ -128,14 +133,23 @@ namespace BookonnectAPI.Controllers
                 return Unauthorized(new { Message = "Please sign in again." });
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.ID == int.Parse(userId));
-            if (user == null)
+            if (!UserExists(int.Parse(userId)))
             {
                 _logger.LogWarning("User in token does not exist");
                 return NotFound(new { Message = "User not found. Sign in again." });
             }
 
-            bool orderExists = _context.Orders.Any(ord => ord.Total == orderDTO.Total && ord.Customer.ID == user.ID);
+            /**
+             * Project bookIDs from orderDTO.OrderItems using Select
+             * Project orderItems from context and intersect with the above bookIDs. Instersect makes use of HashSet<T>
+             * so instead of O(n^2) for the check, we have O(n)
+             */
+            var orderItemDTOBookIDs = orderDTO.OrderItems.Select(orderItemDTO => orderItemDTO.BookID);
+            bool orderExists = _context.Orders.Any(ord =>
+                ord.Total == orderDTO.Total &&
+                ord.CustomerID == int.Parse(userId) &&
+                ord.OrderItems.Select(orderItem => orderItem.BookID).Intersect(orderItemDTOBookIDs).Any());
+
             if (orderExists)
             {
                 _logger.LogWarning("Order exists");
@@ -144,8 +158,9 @@ namespace BookonnectAPI.Controllers
 
             var order = new Order
             {
-                CustomerID = user.ID,
+                CustomerID = int.Parse(userId),
                 Total = orderDTO.Total,
+                DateTime = DateTime.Now,
                 OrderItems = orderDTO.OrderItems
                    .Select(orderItemDTO =>
                        new OrderItem
@@ -162,8 +177,13 @@ namespace BookonnectAPI.Controllers
             {
                 _logger.LogInformation("Saving order to database");
                 await _context.SaveChangesAsync();
-                // Send Order Confirmation message
-                SendOrderConfirmationEmail(user);
+                var customer = await _context.Users.FindAsync(order.CustomerID);
+                if (customer != null)
+                {
+                    // Send Order Confirmation message to customer
+                    SendOrderConfirmationEmail(customer);
+                }
+
                 return CreatedAtAction(nameof(GetOrder), new { id = order.ID }, Order.OrderToDTO(order));
             }
             catch (Exception ex)
@@ -212,6 +232,19 @@ namespace BookonnectAPI.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+
+                foreach (OrderItem orderItem in order.OrderItems)
+                {
+                    var book = await _context.Books
+                        .Where(bk => bk.ID == orderItem.BookID)
+                        .Include(bk => bk.Vendor)
+                        .FirstOrDefaultAsync();
+                    if (book != null)
+                    {
+                        // Send Dispatch message to vendor
+                        SendOrderDispatchEmail(book.Vendor, order);
+                    }
+                }
                 return Ok(Order.OrderToDTO(order));
             }
             catch (DbUpdateConcurrencyException ex)
@@ -287,12 +320,37 @@ namespace BookonnectAPI.Controllers
                     Body = $@"<html><body>
                         <p>Hi {receiver.Name},</p>
                         <p>Thank you for making a purchase on Bookonnect! Your order has been confirmed successfully.
-                           We have reached out to the owner to start delivery. You should receive the book in 3 days. If this is not the case click here.
+                           You can track the status of the order under My Orders.
                         </p>
                         <p>Warm regards,</p>
                         <p>Bookonnect Team.</p>"
                 };
 
+            _logger.LogInformation($"Sending confimation email to {receiver.Name}");
+            _mailLibrary.SendMail(emailData);
+        }
+
+        private void SendOrderDispatchEmail(User receiver, Order order)
+        {
+            var emailData = new Email
+            {
+                Subject = "Deliver the book",
+                ToId = receiver.Email,
+                Name = receiver.Name,
+                Body = $@"<html><body>
+                        <p>Hi {receiver.Name},</p>
+                        <p>We've got good news! Your book has been order.</p>
+                        <p>Please deliver the book using details:
+                                Location: {order.DeliveryLocation}
+                                Instructions: {order.DeliveryInstructions}
+                        </p>
+                        <p> Please update the status upon dispatch in your Profile.</p>
+
+                        <p>Warm regards,</p>
+                        <p>Bookonnect Team.</p>"
+            };
+
+            _logger.LogInformation($"Sending dispatch email to {receiver.Name}");
             _mailLibrary.SendMail(emailData);
         }
     }
