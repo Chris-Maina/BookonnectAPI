@@ -8,4 +8,3 @@ public class ConfirmationDTO
     public int OrderItemID { get; set; }
     public int? UserID { get; set; }
 }
-

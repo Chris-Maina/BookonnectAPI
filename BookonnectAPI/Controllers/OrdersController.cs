@@ -102,10 +102,10 @@ namespace BookonnectAPI.Controllers
                 .Include(ord => ord.Payments)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                .ThenInclude(book => book != null ? book.Image : null)
+                .ThenInclude(book => book.Image)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                .ThenInclude(book => book != null ? book.Vendor : null)
+                .ThenInclude(book => book.Vendor)
                 .FirstOrDefaultAsync();
 
             if (order == null)
