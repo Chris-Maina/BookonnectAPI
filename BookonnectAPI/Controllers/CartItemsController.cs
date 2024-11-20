@@ -42,13 +42,16 @@ namespace BookonnectAPI.Controllers
             }
 
             _logger.LogInformation("Fetching cart items");
-            var cartItems = _context.CartItems
+            var cartItems = await _context.CartItems
                 .Where(c => c.UserID == int.Parse(userId))
                 .Include(c => c.Book)
                 .ThenInclude(b => b != null ? b.Image : null)
-                .Select(c => CartItem.CartItemToDTO(c));
+                .Include(c => c.Book)
+                .ThenInclude(b => b.Vendor)
+                .Select(c => CartItem.CartItemToDTO(c))
+                .ToArrayAsync();
 
-            return await cartItems.ToListAsync();
+            return Ok(cartItems);
         }
 
         // GET: api/CartItems/5
@@ -64,7 +67,7 @@ namespace BookonnectAPI.Controllers
                 return NotFound(new { Message = "Cart item not found." });
             }
 
-            return CartItem.CartItemToDTO(cartItem);
+            return Ok(CartItem.CartItemToDTO(cartItem));
         }
 
         // PUT: api/CartItems/5
