@@ -16,7 +16,6 @@ public class UsersController: ControllerBase
 	public UsersController(BookonnectContext context)
 	{
 		_context = context;
-        _context.Database.EnsureCreated();
     }
 
 

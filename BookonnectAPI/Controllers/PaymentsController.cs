@@ -22,7 +22,6 @@ public class PaymentsController : ControllerBase
     public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger, IMpesaLibrary mpesaLibrary)
     {
         _context = context;
-        _context.Database.EnsureCreated();
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _mpesaLibrary = mpesaLibrary;

@@ -21,7 +21,6 @@ public class AuthController: ControllerBase
 	public AuthController(BookonnectContext context, IConfiguration configuration, ITokenLibrary tokenLibrary, ILogger<AuthController> logger, IMailLibrary mailLibrary)
 	{
 		_context = context;
-		_context.Database.EnsureCreated();
         _configuration = configuration;
 		_tokenLibrary = tokenLibrary;
 		_logger = logger;

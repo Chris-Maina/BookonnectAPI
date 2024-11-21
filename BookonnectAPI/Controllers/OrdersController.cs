@@ -20,7 +20,6 @@ namespace BookonnectAPI.Controllers
         public OrdersController(BookonnectContext context, ILogger<OrdersController> logger, IMailLibrary mailLibrary)
         {
             _context = context;
-            context.Database.EnsureCreated();
             _logger = logger;
             _mailLibrary = mailLibrary;
         }

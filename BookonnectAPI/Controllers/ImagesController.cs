@@ -18,8 +18,6 @@ public class ImagesController: ControllerBase
     public ImagesController(BookonnectContext context, IConfiguration configuration)
 	{
 		_context = context;
-        _context.Database.EnsureCreated();
-
         _cloudinary = new Cloudinary(configuration["Storage:CloudinaryURL"]);
         _cloudinary.Api.Secure = true;
 	}

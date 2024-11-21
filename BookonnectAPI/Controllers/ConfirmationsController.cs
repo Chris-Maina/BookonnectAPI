@@ -23,7 +23,6 @@ public class ConfirmationsController: ControllerBase
 		_context = context;
 		_logger = logger;
 		_mailLibrary = mailLibrary;
-        _context.Database.EnsureCreated();
     }
 
     [HttpPost]

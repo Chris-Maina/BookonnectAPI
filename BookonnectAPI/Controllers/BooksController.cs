@@ -17,7 +17,6 @@ public class BooksController: ControllerBase
     public BooksController(BookonnectContext context, ILogger<BooksController> logger)
 	{
 		_context = context;
-        _context.Database.EnsureCreated();
         _logger = logger;
     }
 

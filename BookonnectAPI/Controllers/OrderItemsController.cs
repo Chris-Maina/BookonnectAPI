@@ -20,7 +20,6 @@ public class OrderItemsController : ControllerBase
     public OrderItemsController(BookonnectContext context, ILogger<OrderItem> logger)
     {
         _context = context;
-        _context.Database.EnsureCreated();
         _logger = logger;
 
     }
