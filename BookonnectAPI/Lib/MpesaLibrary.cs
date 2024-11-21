@@ -53,7 +53,7 @@ public class MpesaLibrary: IMpesaLibrary
         }
     }
 
-    private async Task<string> PostTransactionStatus(string transactionID, string accessToken)
+    private async Task<string> PostTransactionStatus(string transactionID, string accessToken, int orderID)
     {
 
         // construct mpesa request and send it
@@ -67,7 +67,7 @@ public class MpesaLibrary: IMpesaLibrary
             // PartyA = 7845640,
             { "PartyA" , "600984" },
             { "IdentifierType" , "4" },
-            { "ResultURL" , "https://mydomain.com/TransactionStatus/result/" }, // must be a https domain. modify after hosting
+            { "ResultURL" , $"https://mydomain.com/TransactionStatus/result/?transactionID={transactionID}&orderID={orderID}" }, // must be a https domain. modify after hosting
             { "QueueTimeOutURL" , "https://mydomain.com/TransactionStatus/queue/" },
             { "Remarks" ,"OK" },
         };
@@ -138,11 +138,11 @@ public class MpesaLibrary: IMpesaLibrary
         }
     }
 
-    public async Task<TransactionStatusResponse?> GetTransactionStatusResponse(string transactionID, string accessToken)
+    public async Task<TransactionStatusResponse?> GetTransactionStatusResponse(string transactionID, string accessToken, int orderID)
     {
         try
         {
-            string response = await PostTransactionStatus(transactionID, accessToken);
+            string response = await PostTransactionStatus(transactionID, accessToken, orderID);
             if(string.IsNullOrEmpty(response))
             {
                 return null;
