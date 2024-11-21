@@ -17,6 +17,7 @@ public class PaymentsController : ControllerBase
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PaymentsController> _logger;
     private readonly IMpesaLibrary _mpesaLibrary;
+    int bookConntectAdminUserID = 0;
 
     public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger, IMpesaLibrary mpesaLibrary)
     {
@@ -51,12 +52,7 @@ public class PaymentsController : ControllerBase
             return NotFound(new { Message = "User not found. Sign in again." });
         }
 
-        var existingPayment = await _context.Payments
-            .Where(p => p.ID == paymentDTO.ID && p.OrderID == paymentDTO.OrderID && p.UserID == int.Parse(userId))
-            .Include(p => p.User)
-            .FirstOrDefaultAsync();
-
-        if (PaymentExists(paymentDTO.ID, paymentDTO.OrderID, int.Parse(userId)))
+        if (PaymentExists(paymentDTO.ID, null, null, null, paymentDTO.Amount))
         {
             _logger.LogInformation("Found an existing payment with the ID {0}", paymentDTO.ID);
             return Conflict(new { Message = "Payment already exists" });
@@ -75,7 +71,7 @@ public class PaymentsController : ControllerBase
             }
 
             _logger.LogInformation("Fetching transaction status");
-            TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.GetTransactionStatusResponse(paymentDTO.ID, tokenResponse.AccessToken);
+            TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.GetTransactionStatusResponse(paymentDTO.ID, tokenResponse.AccessToken, paymentDTO.OrderID);
 
             if (transactionStatusResponse == null)
             {
@@ -96,10 +92,13 @@ public class PaymentsController : ControllerBase
             return StatusCode(500, ex.Message);
         }
 
+        // TODO: Move this to PostTransactionStatusResult webhook so as to just be sure
         var payment = new Payment
         {
             ID = paymentDTO.ID,
-            UserID = int.Parse(userId),
+            FromID = int.Parse(userId),
+            ToID = bookConntectAdminUserID,
+            Amount = paymentDTO.Amount,
             DateTime = DateTime.Now,
             OrderID = paymentDTO.OrderID
         };
@@ -130,10 +129,11 @@ public class PaymentsController : ControllerBase
 
     [HttpPost("/owner")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult> PayBookOwner(PaymentDTO paymentDTO)
+    public async Task<ActionResult> PayBookOwner(OrderItemDTO orderItemDTO)
     {
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
@@ -148,26 +148,22 @@ public class PaymentsController : ControllerBase
             return NotFound(new { Message = "User not found. Sign in again." });
         }
 
-        var paymentsWithOrdersCount = await _context.Payments
-            .Where(p => p.OrderID == paymentDTO.OrderID)
-            .CountAsync();
-
-        if (paymentsWithOrdersCount >= 2)
-        {
-            return Conflict(new { Message = "Payment already made to book owner" });
-        }
-
-
-        var order = await _context.Orders
-            .Where(ord => ord.ID == paymentDTO.OrderID)
-            .Include(ord => ord.OrderItems)
-            .ThenInclude(ordItem => ordItem.Book)
-            .ThenInclude(bk => bk != null ? bk.Vendor : null)
+        var orderItem = await _context.OrderItems
+            .Where(ordItem => ordItem.ID == orderItemDTO.ID)
+            .Include(ordItem => ordItem.Book)
+            .ThenInclude(ordItem => ordItem.Vendor)
             .FirstOrDefaultAsync();
 
-        if (order == null)
+        if (orderItem == null)
         {
-            return NotFound(new { Message = "Order not found" });
+            _logger.LogWarning("Order item not found");
+            return NotFound(new { Message = "Order item not found. Try again later." });
+        }
+
+        var amount = orderItem.Quantity * orderItem.Book.Price;
+        if (PaymentExists(null, orderItem.OrderID, orderItem.Book.VendorID, bookConntectAdminUserID, amount))
+        {
+            return Conflict(new { Message = "Payment already made to book owner " });
         }
 
         MpesaAuthToken? tokenResponse;
@@ -185,36 +181,27 @@ public class PaymentsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error sending MPESA request");
+            _logger.LogError(ex, "Error getting MPESA Auth token");
             return StatusCode(500, ex.Message);
         }
 
 
-        foreach (var orderItem in order.OrderItems)
+        _logger.LogInformation("Making B2C request");
+        TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.MakeBusinessPayment(amount.ToString()!, orderItem.Book.Vendor.Phone!, tokenResponse.AccessToken, orderItem.OrderID);
+
+        if (transactionStatusResponse == null)
         {
-            if (PaymentExists(null, order.ID, orderItem.Book?.VendorID))
-            {
-                return Conflict(new { Message = "Payment already made to book owner " });
-            }
-
-            _logger.LogInformation("Making B2C request");
-            var amount = orderItem.Quantity * orderItem.Book?.Price;
-            TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.MakeBusinessPayment(amount.ToString()!, orderItem.Book?.Vendor.Phone!, tokenResponse.AccessToken, paymentDTO.OrderID);
-
-            if (transactionStatusResponse == null)
-            {
-                _logger.LogWarning("Mpesa b2 request had empty response");
-                return NotFound(new { Message = "Received null response from MPESA" });
-            }
-            if (transactionStatusResponse.ResponseCode != 0)
-            {
-                _logger.LogError("The B2C request has the error {0}", transactionStatusResponse);
-                return BadRequest(new { Message = "MPESA business payment request was unsuccessfull. Try again later." });
-            }
-            _logger.LogInformation("B2C request was successfull {0}", transactionStatusResponse);
+            _logger.LogWarning("Mpesa b2 request had empty response");
+            return NotFound(new { Message = "Received null response from MPESA" });
         }
+        if (transactionStatusResponse.ResponseCode != 0)
+        {
+            _logger.LogError("The B2C request has the error {0}", transactionStatusResponse);
+            return BadRequest(new { Message = "MPESA business payment request was unsuccessfull. Try again later." });
+        }
+        _logger.LogInformation("B2C request was accepted for processing {0}", transactionStatusResponse);
 
-        return Ok();
+        return Ok(new { Message = "MPESA request was received. Payment will be made shortly."});
 
     }
 
@@ -228,17 +215,17 @@ public class PaymentsController : ControllerBase
 
     private bool UserExists(int id) => _context.Users.Any(user => user.ID == id);
 
-    private bool PaymentExists(string? id, int? orderID, int? userID) 
+    private bool PaymentExists(string? id, int? orderID, int? toUserID, int? fromUserID, float? amount) 
     {
         if (id != null)
         {
             return _context.Payments.Any(p => p.ID == id);
         }
 
-        if (orderID != null && userID != null)
+        if (orderID != null && toUserID != null && fromUserID != null && amount != null)
         {
 
-            return _context.Payments.Any(p => p.OrderID == orderID && p.UserID == userID);
+            return _context.Payments.Any(p => p.OrderID == orderID && p.ToID == toUserID && p.FromID == fromUserID && p.Amount == amount);
         }
 
         return false;
