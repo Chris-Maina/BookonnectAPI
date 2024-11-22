@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BookonnectAPI.Lib;
 using Microsoft.EntityFrameworkCore;
+using BookonnectAPI.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace BookonnectAPI.Controllers;
 
@@ -17,14 +19,15 @@ public class PaymentsController : ControllerBase
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PaymentsController> _logger;
     private readonly IMpesaLibrary _mpesaLibrary;
-    int bookConntectAdminUserID = 0;
+    private readonly MailSettingsOptions _mailSettings;
 
-    public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger, IMpesaLibrary mpesaLibrary)
+    public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger, IMpesaLibrary mpesaLibrary, IOptionsSnapshot<MailSettingsOptions> mailSettings)
     {
         _context = context;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _mpesaLibrary = mpesaLibrary;
+        _mailSettings = mailSettings.Value;
     }
 
     // POST: api/Payments
@@ -92,11 +95,17 @@ public class PaymentsController : ControllerBase
         }
 
         // TODO: Move this to PostTransactionStatusResult webhook so as to just be sure
+        var bookonnectAdmin = _context.Users.Where(u => u.Email == _mailSettings.EmailId).FirstOrDefault();
+        if (bookonnectAdmin == null)
+        {
+            return NotFound(new { Message = "Could not find Bookonnect admin payment details.Try again" });
+        }
+
         var payment = new Payment
         {
             ID = paymentDTO.ID,
             FromID = int.Parse(userId),
-            ToID = bookConntectAdminUserID,
+            ToID = bookonnectAdmin.ID,
             Amount = paymentDTO.Amount,
             DateTime = DateTime.Now,
             OrderID = paymentDTO.OrderID
@@ -159,8 +168,14 @@ public class PaymentsController : ControllerBase
             return NotFound(new { Message = "Order item not found. Try again later." });
         }
 
+        var bookonnectAdmin = _context.Users.Where(u => u.Email == _mailSettings.EmailId).FirstOrDefault();
+        if (bookonnectAdmin == null)
+        {
+            return NotFound(new { Message = "Could not find Bookonnect admin payment details.Try again" });
+        }
+
         var amount = orderItem.Quantity * orderItem.Book.Price;
-        if (PaymentExists(null, orderItem.OrderID, orderItem.Book.VendorID, bookConntectAdminUserID, amount))
+        if (PaymentExists(null, orderItem.OrderID, orderItem.Book.VendorID, bookonnectAdmin.ID, amount))
         {
             return Conflict(new { Message = "Payment already made to book owner " });
         }
