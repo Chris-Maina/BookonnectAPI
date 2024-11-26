@@ -61,6 +61,8 @@ public class BooksController: ControllerBase
         try
         {
             await _context.SaveChangesAsync();
+            // loading Vendor reference navigation
+            _context.Entry(book).Reference(bk => bk.Vendor).Load();
             return CreatedAtAction(nameof(PostBook), new { id = book.ID }, Book.BookToDTO(book));
         } catch (Exception ex)
         {
@@ -213,6 +215,7 @@ public class BooksController: ControllerBase
         try
         {
             await _context.SaveChangesAsync();
+            _context.Entry(book).Reference(bk => bk.Vendor).Load();
             return Ok(Book.BookToDTO(book));
         }
         catch (DbUpdateConcurrencyException ex)
