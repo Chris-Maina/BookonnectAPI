@@ -31,7 +31,7 @@ public class PaymentsController : ControllerBase
     }
 
     // POST: api/Payments
-    // Send payment to MPESA to get confirmation
+    // Sends payment to MPESA to get confirmation
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -135,7 +135,10 @@ public class PaymentsController : ControllerBase
         Console.WriteLine(result);
     }
 
-    [HttpPost("/owner")]
+    // POST: api/Payments/owner
+    // Sends payment request to Mpesa
+    [HttpPost]
+    [Route("Owner")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -159,7 +162,7 @@ public class PaymentsController : ControllerBase
         var orderItem = await _context.OrderItems
             .Where(ordItem => ordItem.ID == orderItemDTO.ID)
             .Include(ordItem => ordItem.Book)
-            .ThenInclude(ordItem => ordItem.Vendor)
+            .ThenInclude(bk => bk != null ? bk.Vendor :null)
             .FirstOrDefaultAsync();
 
         if (orderItem == null)
@@ -174,8 +177,8 @@ public class PaymentsController : ControllerBase
             return NotFound(new { Message = "Could not find Bookonnect admin payment details.Try again" });
         }
 
-        var amount = orderItem.Quantity * orderItem.Book.Price;
-        if (PaymentExists(null, orderItem.OrderID, orderItem.Book.VendorID, bookonnectAdmin.ID, amount))
+        float amount = (float)(orderItem.Quantity * orderItem.Book?.Price!);
+        if (PaymentExists(null, orderItem.OrderID, orderItem.Book?.VendorID, bookonnectAdmin.ID, amount))
         {
             return Conflict(new { Message = "Payment already made to book owner " });
         }
@@ -201,11 +204,11 @@ public class PaymentsController : ControllerBase
 
 
         _logger.LogInformation("Making B2C request");
-        TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.MakeBusinessPayment(amount.ToString()!, orderItem.Book.Vendor.Phone!, tokenResponse.AccessToken, orderItem.OrderID);
+        TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.MakeBusinessPayment(amount, 254708374149, tokenResponse.AccessToken, orderItem.OrderID);
 
         if (transactionStatusResponse == null)
         {
-            _logger.LogWarning("Mpesa b2 request had empty response");
+            _logger.LogWarning("Mpesa b2c request had empty response");
             return NotFound(new { Message = "Received null response from MPESA" });
         }
         if (transactionStatusResponse.ResponseCode != 0)

@@ -67,7 +67,7 @@ public class MpesaLibrary: IMpesaLibrary
             // PartyA = 7845640,
             { "PartyA" , "600984" },
             { "IdentifierType" , "4" },
-            { "ResultURL" , $"https://mydomain.com/TransactionStatus/result/?transactionID={transactionID}&orderID={orderID}" }, // must be a https domain. modify after hosting
+            { "ResultURL" , string.Format("https://mydomain.com/TransactionStatus/result/?transactionID={0}&orderID={1}", transactionID, orderID) }, // must be a https domain. modify after hosting
             { "QueueTimeOutURL" , "https://mydomain.com/TransactionStatus/queue/" },
             { "Remarks" ,"OK" },
         };
@@ -97,24 +97,27 @@ public class MpesaLibrary: IMpesaLibrary
 
     }
 
-    private async Task<string> PostBusinessPayment(string amount, string recipientPhoneNumber, string accessToken, int orderID)
+    private async Task<string> PostBusinessPayment(float amount, long recipientPhoneNumber, string accessToken, int orderID)
     {
         // construct mpesa request and send it
         var httpClient = _httpClientFactory.CreateClient("Safaricom");
-        var payload = new Dictionary<string, string>
+        Dictionary<string, object> payload = new Dictionary<string, object>
         {
+            {"OriginatorConversationID", Guid.NewGuid().ToString() },
             { "InitiatorName", _configuration[initiatorNameKey]! },
             { "SecurityCredential", _configuration[securityCredentialKey]! },
             { "CommandID", "BusinessPayment" },
             { "Amount" , amount },
              // PartyA = 7845640,
-            { "PartyA" , "600984" },
+            { "PartyA" , 600984 },
             { "PartyB", recipientPhoneNumber },
             { "Remarks" ,"OK" },
             { "QueueTimeOutURL" , "https://mydomain.com/b2c/queue/" },
-            { "ResultURL" , $"https://mydomain.com/b2c/result/?orderID={orderID}" },
-            { "Occassion" , "Book payment" },
+            { "ResultURL" , string.Format("https://mydomain.com/b2c/result/?orderID={0}", orderID) },
+            { "Occassion" , "Book payment" }
         };
+
+        
         string jsonPayloadString = JsonConvert.SerializeObject(payload);
         HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, "/mpesa/b2c/v3/paymentrequest");
         requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -123,6 +126,7 @@ public class MpesaLibrary: IMpesaLibrary
         try
         {
             using var response = await httpClient.SendAsync(requestMessage);
+
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
         }
@@ -134,6 +138,11 @@ public class MpesaLibrary: IMpesaLibrary
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, $"Request failed with status code: {ex.StatusCode}");
+            throw;
+        }
+        catch(Exception ex)
+        {
+            _logger.LogError(ex, $"Request failed");
             throw;
         }
     }
@@ -165,7 +174,7 @@ public class MpesaLibrary: IMpesaLibrary
         return JsonConvert.DeserializeObject<MpesaAuthToken>(response);
     }
 
-    public async Task<TransactionStatusResponse?> MakeBusinessPayment(string amount, string recipientPhoneNumber, string accessToken, int orderID)
+    public async Task<TransactionStatusResponse?> MakeBusinessPayment(float amount, long recipientPhoneNumber, string accessToken, int orderID)
     {
         try
         {
