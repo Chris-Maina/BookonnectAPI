@@ -11,14 +11,14 @@ public class OrderItem
 
 	/**
 	 * OrderItem must be associated with a Book, Order
-	 * The reference navigations for each of the above relations can be options
+	 * The reference navigations for each of the above relations are optional
 	 */
     public int BookID { get; set; }
 	[JsonIgnore]
-	public Book Book { get; set; } = null!;
+	public Book? Book { get; set; }
 
     public int OrderID { get; set; }
-	public Order Order { get; set; } = null!;
+	public Order? Order { get; set; }
 
     [JsonIgnore]
     public ICollection<Confirmation>? Confirmations { get; } // Optional collection navigation
@@ -32,7 +32,7 @@ public class OrderItem
 			Quantity = orderItem.Quantity,
 			OrderID = orderItem.OrderID,
 			BookID = orderItem.BookID,
-			Book = Book.BookToDTO(orderItem.Book),
+			Book = orderItem.Book != null ? Book.BookToDTO(orderItem.Book) : null,
 			Confirmations = orderItem.Confirmations != null ? orderItem.Confirmations.Select(Confirmation.ConfirmationToDTO).ToList() : null,
 		};
 	}
