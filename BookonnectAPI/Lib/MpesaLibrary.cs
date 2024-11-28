@@ -11,6 +11,7 @@ public class MpesaLibrary: IMpesaLibrary
     const string consumerSectret = "Authentication:Mpesa:ConsumerSecret";
     const string securityCredentialKey = "Mpesa:SecurityCredential";
     const string initiatorNameKey = "Mpesa:InitiatorName";
+    const string partyA = "Mpesa:PartyA";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<MpesaLibrary> _logger;
@@ -64,8 +65,7 @@ public class MpesaLibrary: IMpesaLibrary
             { "SecurityCredential" , "UQcIopoI8SXUjT5f0Su8TzIC6F2XH9NM3Otqm6sYItOHeaP6cbz0pQgWNlLZCCpdnH9KV8enUqsV5bBBre" },
             { "CommandID" , "TransactionStatusQuery" },
             { "TransactionID", $"{transactionID}" },
-            // PartyA = 7845640,
-            { "PartyA" , "600984" },
+            { "PartyA" , _configuration[partyA]! },
             { "IdentifierType" , "4" },
             { "ResultURL" , string.Format("https://mydomain.com/TransactionStatus/result/?transactionID={0}&orderID={1}", transactionID, orderID) }, // must be a https domain. modify after hosting
             { "QueueTimeOutURL" , "https://mydomain.com/TransactionStatus/queue/" },
@@ -108,8 +108,7 @@ public class MpesaLibrary: IMpesaLibrary
             { "SecurityCredential", _configuration[securityCredentialKey]! },
             { "CommandID", "BusinessPayment" },
             { "Amount" , amount },
-             // PartyA = 7845640,
-            { "PartyA" , 600984 },
+            { "PartyA" , _configuration[partyA]! },
             { "PartyB", recipientPhoneNumber },
             { "Remarks" ,"OK" },
             { "QueueTimeOutURL" , "https://mydomain.com/b2c/queue/" },
