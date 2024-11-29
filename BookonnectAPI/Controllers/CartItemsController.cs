@@ -47,7 +47,7 @@ namespace BookonnectAPI.Controllers
                 .Include(c => c.Book)
                 .ThenInclude(b => b != null ? b.Image : null)
                 .Include(c => c.Book)
-                .ThenInclude(b => b.Vendor)
+                .ThenInclude(b => b != null ? b.Vendor : null)
                 .Select(c => CartItem.CartItemToDTO(c))
                 .ToArrayAsync();
 

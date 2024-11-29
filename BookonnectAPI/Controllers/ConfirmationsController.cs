@@ -48,9 +48,9 @@ public class ConfirmationsController: ControllerBase
         var orderItem = await _context.OrderItems
               .Where(orderItem => orderItem.ID == confirmationDTO.OrderItemID)
               .Include(orderItem => orderItem.Book)
-              .ThenInclude(bk => bk.Vendor)
+              .ThenInclude(bk => bk != null ? bk.Vendor : null)
               .Include(orderItem => orderItem.Order)
-              .ThenInclude(ord => ord.Customer)
+              .ThenInclude(ord => ord != null ? ord.Customer : null)
               .FirstOrDefaultAsync();
 
         if (orderItem == null)
@@ -197,9 +197,14 @@ public class ConfirmationsController: ControllerBase
         switch (confirmationType)
         {
             case ConfirmationType.Dispatch:
-                if (orderItem.Order.Customer == null)
+                if (orderItem.Order?.Customer == null)
                 {
                     _logger.LogWarning("Order customer not found");
+                    break;
+                }
+                if (orderItem.Book == null)
+                {
+                    _logger.LogWarning("Ordered book not found");
                     break;
                 }
 
@@ -207,7 +212,7 @@ public class ConfirmationsController: ControllerBase
                 SendDispatchEmail(orderItem.Order.Customer, orderItem.Book);
                 break;
             case ConfirmationType.Receipt:
-                if (orderItem.Book.Vendor == null)
+                if (orderItem.Book?.Vendor == null)
                 {
                     _logger.LogWarning("Book vendor not found");
                     break;

@@ -67,7 +67,7 @@ namespace BookonnectAPI.Controllers
                 .ThenInclude(orderItem => orderItem.Confirmations)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                .ThenInclude(bk => bk.Vendor)
+                .ThenInclude(bk => bk != null ? bk.Vendor : null)
                 .Select(ord => Order.OrderToDTO(ord))
                 .ToArrayAsync();
 
@@ -101,10 +101,10 @@ namespace BookonnectAPI.Controllers
                 .Include(ord => ord.Payments)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                .ThenInclude(book => book.Image)
+                .ThenInclude(book => book != null ? book.Image : null)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                .ThenInclude(book => book.Vendor)
+                .ThenInclude(book => book != null ? book.Vendor : null)
                 .FirstOrDefaultAsync();
 
             if (order == null)
