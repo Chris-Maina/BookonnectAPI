@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 
 namespace BookonnectAPI.Lib;
 
+// TODO: Implement when LIPA NA MPESA till is ready
 public class MpesaLibrary: IMpesaLibrary
 {
     const string consumerKey = "Authentication:Mpesa:ConsumerKey";

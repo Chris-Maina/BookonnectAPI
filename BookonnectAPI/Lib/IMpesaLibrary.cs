@@ -2,6 +2,7 @@
 
 namespace BookonnectAPI.Lib;
 
+// TODO: Implement when LIPA NA MPESA till is ready
 public interface IMpesaLibrary
 {
     public Task<MpesaAuthToken?> GetMpesaAuthToken();
