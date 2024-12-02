@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
 using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BookonnectAPI.Controllers;
 
@@ -17,12 +19,14 @@ public class ConfirmationsController: ControllerBase
 	private readonly BookonnectContext _context;
 	private readonly ILogger<ConfirmationsController> _logger;
     private readonly IMailLibrary _mailLibrary;
+    private readonly MailSettingsOptions _mailSettings;
 
-	public ConfirmationsController(BookonnectContext context, ILogger<ConfirmationsController> logger, IMailLibrary mailLibrary)
+    public ConfirmationsController(BookonnectContext context, ILogger<ConfirmationsController> logger, IMailLibrary mailLibrary, IOptionsSnapshot<MailSettingsOptions> mailSettings)
 	{
 		_context = context;
 		_logger = logger;
 		_mailLibrary = mailLibrary;
+        _mailSettings = mailSettings.Value;
     }
 
     [HttpPost]
@@ -219,6 +223,9 @@ public class ConfirmationsController: ControllerBase
                 }
                 // Send vendor receipt email by customer
                 SendReceiptEmail(orderItem.Book.Vendor, orderItem.Book);
+                // Send payment request to admin
+                float amount = (float)(orderItem.Quantity * orderItem.Book.Price);
+                SendBookVendorPaymentRequest(orderItem.ID, orderItem.Book, amount);
                 break;
         }
     }
@@ -254,12 +261,38 @@ public class ConfirmationsController: ControllerBase
                         <p>Hi {receiver.Name},</p>
                         <p>We've got good news! Customer has confirmed receipt of the book, {book.Title}.</p>
                         <p>We'll be sending your payment shortly.</p>
+                        <p>If payment delays for a day, send a reminder to Bookonnect Admin using the email in from field.</p>
 
                         <p>Warm regards,</p>
                         <p>Bookonnect Team.</p>"
         };
 
         _logger.LogInformation($"Sending receipt email to {receiver.Name}");
+        _mailLibrary.SendMail(emailData);
+    }
+
+    private void SendBookVendorPaymentRequest(int orderItemID, Book book, float amount)
+    {
+        var emailData = new Email
+        {
+            Subject = $"Send Payment for Order Item {orderItemID}",
+            ToId = _mailSettings.EmailId,
+            Name = _mailSettings.Name,
+            Body = $@"<html>
+                        <body>
+                            <p>Send payment for {book.Title} to vendor with details</p>
+                            <ul>
+                               <li>Phone number: <b>{book.Vendor.Phone}</b></li>
+                               <li>Amount: <b>{amount}</b></li>
+                               <li>Name: <b>{book.Vendor.Name}</b></li>
+                            </ul>
+
+                            <p>Warm regards,</p>
+                            <p>Bookonnect Team.</p>
+                        </body>
+                    "
+        };
+        _logger.LogInformation($"Sending payment request email to Bookonnect Admin to pay vendor");
         _mailLibrary.SendMail(emailData);
     }
 }
