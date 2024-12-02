@@ -7,6 +7,7 @@ using BookonnectAPI.Lib;
 using Microsoft.EntityFrameworkCore;
 using BookonnectAPI.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.JsonPatch;
 
 namespace BookonnectAPI.Controllers;
 
@@ -18,20 +19,19 @@ public class PaymentsController : ControllerBase
     private readonly BookonnectContext _context;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PaymentsController> _logger;
-    private readonly IMpesaLibrary _mpesaLibrary;
     private readonly MailSettingsOptions _mailSettings;
+    private readonly IMailLibrary _mailLibrary;
 
-    public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger, IMpesaLibrary mpesaLibrary, IOptionsSnapshot<MailSettingsOptions> mailSettings)
+    public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger, IOptionsSnapshot<MailSettingsOptions> mailSettings, IMailLibrary mailLibrary)
     {
         _context = context;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
-        _mpesaLibrary = mpesaLibrary;
         _mailSettings = mailSettings.Value;
+        _mailLibrary = mailLibrary;
     }
 
     // POST: api/Payments
-    // Sends payment to MPESA to get confirmation
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -54,62 +54,170 @@ public class PaymentsController : ControllerBase
             return NotFound(new { Message = "User not found. Sign in again." });
         }
 
-        if (PaymentExists(paymentDTO.ID, null, null, null, paymentDTO.Amount))
+        var order = await _context.Orders.FindAsync(paymentDTO.OrderID);
+        if (order == null)
+        {
+            _logger.LogInformation("Order with id {0} not found", paymentDTO.OrderID);
+            return NotFound(new { Message = "Order not found. Try again." });
+        }
+
+        if (PaymentExists(paymentDTO.ID, null, null, null, order.Total))
         {
             _logger.LogInformation("Found an existing payment with the ID {0}", paymentDTO.ID);
             return Conflict(new { Message = "Payment already exists" });
         }
 
-        try
-        {
-            // Add token in cache with user id as key. If expired refetch
-            _logger.LogInformation("Fetching MPESA access token");
-            MpesaAuthToken? tokenResponse = await _mpesaLibrary.GetMpesaAuthToken();
-
-            if (tokenResponse == null)
-            {
-                _logger.LogWarning("MPESA access token not found");
-                return NotFound(new { Message = "Could not fetch MPESA auth token. Try again later." });
-            }
-
-            _logger.LogInformation("Fetching transaction status");
-            TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.GetTransactionStatusResponse(paymentDTO.ID, tokenResponse.AccessToken, paymentDTO.OrderID);
-
-            if (transactionStatusResponse == null)
-            {
-                _logger.LogWarning("Could not find transaction for payment with key {0}", paymentDTO.ID);
-                return NotFound(new { Message = "Could not find transaction with the provided MPESA code" });
-            }
-            if (transactionStatusResponse.ResponseCode != 0)
-            {
-                _logger.LogError("The payment key {0} has the tranaction error {1}", paymentDTO.ID, transactionStatusResponse);
-                return BadRequest(new { Message = "MPESA code has an error. Check and try again." });
-            }
-            _logger.LogInformation("Received successfull transaction status {0}", transactionStatusResponse);
-
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error sending MPESA request");
-            return StatusCode(500, ex.Message);
-        }
-
-        // TODO: Move this to PostTransactionStatusResult webhook so as to just be sure
         var bookonnectAdmin = _context.Users.Where(u => u.Email == _mailSettings.EmailId).FirstOrDefault();
         if (bookonnectAdmin == null)
         {
             return NotFound(new { Message = "Could not find Bookonnect admin payment details.Try again" });
         }
 
+        // Send BookAdmin notification to verify payment. List MPESA ref & amount and/or timestamp 
         var payment = new Payment
         {
             ID = paymentDTO.ID,
             FromID = int.Parse(userId),
             ToID = bookonnectAdmin.ID,
-            Amount = paymentDTO.Amount,
+            Amount = order.Total,
             DateTime = DateTime.Now,
             OrderID = paymentDTO.OrderID
         };
+        _context.Payments.Add(payment);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+            SendPaymentVerificationRequest(payment);
+            return CreatedAtAction(nameof(PostPayment), new { id = payment.ID }, Payment.PaymentToDTO(payment));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving payment in DB");
+            return StatusCode(500, ex.Message);
+        }
+    }
+
+    [HttpPatch("{id}")]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult> PatchPayment(string id, [FromBody] JsonPatchDocument<Payment> patchDoc)
+    {
+        _logger.LogInformation("Updating payment");
+        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            _logger.LogWarning("There is no user id in token");
+            return Unauthorized(new { Message = "Please sign in" });
+        }
+
+        var bookonnectAdmin = _context.Users.Where(u => u.ID == int.Parse(userId) && u.Email == _mailSettings.EmailId).FirstOrDefault();
+        if (bookonnectAdmin == null)
+        {
+            return NotFound(new { Message = "Functionality only availabile for Admin user " });
+        }
+
+        if (patchDoc == null)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var payment = await _context.Payments.FindAsync(id);
+        if (payment == null)
+        {
+            _logger.LogWarning("Payment not found");
+            return NotFound(new { Message = "Payment not found" });
+        }
+
+        patchDoc.ApplyTo(payment, ModelState);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        _context.Update(payment);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+            return Ok(payment);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogError(ex, "Error saving payment to DB");
+            if (!PaymentExists(id, null, null, null, null))
+            {
+                return NotFound(new { Message = "Payment not found" });
+            }
+            else
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving payment to DB");
+            return StatusCode(500, ex.Message);
+        }
+
+    }
+
+
+    // POST: api/Payments/owner
+    // Sends payment request to Mpesa
+    // Functionality only available to admin
+    [HttpPost]
+    [Route("Owner")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult> PayBookOwner(PaymentOwnerBody paymentDTO)
+    {
+        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            _logger.LogWarning("User id not found in token");
+            return Unauthorized(new { Message = "Please sign in again." });
+        }
+
+        var bookonnectAdmin = _context.Users.Where(u => u.ID == int.Parse(userId) && u.Email == _mailSettings.EmailId).FirstOrDefault();
+        if (bookonnectAdmin == null)
+        {
+            return NotFound(new { Message = "Functionality only availabile for Admin user " });
+        }
+
+        var orderItem = await _context.OrderItems
+            .Where(ordItem => ordItem.ID == paymentDTO.OrderItemID)
+            .Include(ordItem => ordItem.Book)
+            .ThenInclude(bk => bk != null ? bk.Vendor :null)
+            .FirstOrDefaultAsync();
+
+        if (orderItem == null || orderItem.Book == null)
+        {
+            _logger.LogWarning("Order item not found");
+            return NotFound(new { Message = "Order item not found. Try again later." });
+        }
+
+        if (PaymentExists(null, orderItem.OrderID, orderItem.Book.VendorID, bookonnectAdmin.ID, paymentDTO.Amount))
+        {
+            return Conflict(new { Message = "Payment already made to book owner " });
+        }
+
+        var payment = new Payment
+        {
+            ID = paymentDTO.ID,
+            FromID = bookonnectAdmin.ID,
+            ToID = orderItem.Book.VendorID,
+            Amount = paymentDTO.Amount,
+            DateTime = paymentDTO.DateTime,
+            OrderID = orderItem.OrderID,
+            Status = PaymentStatus.Verified,
+        };
+
         _context.Payments.Add(payment);
 
         try
@@ -122,112 +230,32 @@ public class PaymentsController : ControllerBase
             _logger.LogError(ex, "Error saving payment in DB");
             return StatusCode(500, ex.Message);
         }
-    }
-
-    // webhook to listen to Mpesa transaction status result
-    [HttpPost("/transactionstatus/result")]
-    public void PostTransactionStatusResult(JsonResult result)
-    {
-        // Check the DebitPartyName includes the business
-        // find order with the authorised user id, status(OrderPlaced) and payment amount  
-        // if not found means the transaction id is invalid. 400 BadRequest.
-        // Success, create payment
-        Console.WriteLine(result);
-    }
-
-    // POST: api/Payments/owner
-    // Sends payment request to Mpesa
-    [HttpPost]
-    [Route("Owner")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult> PayBookOwner(OrderItemDTO orderItemDTO)
-    {
-        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
-        {
-            _logger.LogWarning("User id not found in token");
-            return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        if (!UserExists(int.Parse(userId)))
-        {
-            _logger.LogWarning("User with the provided id not found");
-            return NotFound(new { Message = "User not found. Sign in again." });
-        }
-
-        var orderItem = await _context.OrderItems
-            .Where(ordItem => ordItem.ID == orderItemDTO.ID)
-            .Include(ordItem => ordItem.Book)
-            .ThenInclude(bk => bk != null ? bk.Vendor :null)
-            .FirstOrDefaultAsync();
-
-        if (orderItem == null)
-        {
-            _logger.LogWarning("Order item not found");
-            return NotFound(new { Message = "Order item not found. Try again later." });
-        }
-
-        var bookonnectAdmin = _context.Users.Where(u => u.Email == _mailSettings.EmailId).FirstOrDefault();
-        if (bookonnectAdmin == null)
-        {
-            return NotFound(new { Message = "Could not find Bookonnect admin payment details.Try again" });
-        }
-
-        float amount = (float)(orderItem.Quantity * orderItem.Book?.Price!);
-        if (PaymentExists(null, orderItem.OrderID, orderItem.Book?.VendorID, bookonnectAdmin.ID, amount))
-        {
-            return Conflict(new { Message = "Payment already made to book owner " });
-        }
-
-        MpesaAuthToken? tokenResponse;
-        try
-        {
-            _logger.LogInformation("Fetching MPESA access token");
-            tokenResponse = await _mpesaLibrary.GetMpesaAuthToken();
-
-            if (tokenResponse == null)
-            {
-                _logger.LogWarning("MPESA access token not found");
-                return NotFound(new { Message = "Could not fetch MPESA auth token. Try again later." });
-            }
-
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting MPESA Auth token");
-            return StatusCode(500, ex.Message);
-        }
-
-
-        _logger.LogInformation("Making B2C request");
-        TransactionStatusResponse? transactionStatusResponse = await _mpesaLibrary.MakeBusinessPayment(amount, 254708374149, tokenResponse.AccessToken, orderItem.OrderID);
-
-        if (transactionStatusResponse == null)
-        {
-            _logger.LogWarning("Mpesa b2c request had empty response");
-            return NotFound(new { Message = "Received null response from MPESA" });
-        }
-        if (transactionStatusResponse.ResponseCode != 0)
-        {
-            _logger.LogError("The B2C request has the error {0}", transactionStatusResponse);
-            return BadRequest(new { Message = "MPESA business payment request was unsuccessfull. Try again later." });
-        }
-        _logger.LogInformation("B2C request was accepted for processing {0}", transactionStatusResponse);
-
-        return Ok(new { Message = "MPESA request was received. Payment will be made shortly."});
 
     }
 
-    // webhook to listen to Mpesa B2C result
-    [HttpPost("/b2c/result")]
-    public void PostB2CResult(JsonResult result)
+    private void SendPaymentVerificationRequest(Payment payment)
     {
-        // Success, create payment
-        Console.WriteLine(result);
+        var emailData = new Email
+        {
+            Subject = $"Confirm Payment for Order {payment.OrderID}",
+            ToId = _mailSettings.EmailId,
+            Name = _mailSettings.Name,
+            Body = $@"<html>
+                        <body>
+                            <p>Confirm the payment:</p>
+                            <ul>
+                               <li>Mpesa ref: <b>{payment.ID}</b></li>
+                               <li>Amount: <b>{payment.Amount}</b></li>
+                               <li>Time: <b>{payment.DateTime}</b></li>
+                            </ul>
+
+                            <p>Warm regards,</p>
+                            <p>Bookonnect Team.</p>
+                        </body>
+                    "
+        };
+        _logger.LogInformation($"Sending confirm payment email to Bookonnect Admin ");
+        _mailLibrary.SendMail(emailData);
     }
 
     private bool UserExists(int id) => _context.Users.Any(user => user.ID == id);
