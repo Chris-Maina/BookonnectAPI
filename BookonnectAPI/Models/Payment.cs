@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace BookonnectAPI.Models;
 
@@ -10,6 +12,8 @@ public enum PaymentStatus
 
 public class Payment
 {
+    [Column(TypeName = "VARCHAR")]
+    [StringLength(10)]
     public string ID { get; set; } = string.Empty;// will store the MPESA transaction code
     public PaymentStatus Status { get; set; }  = PaymentStatus.Unverified;
     public DateTime DateTime { get; set; }
