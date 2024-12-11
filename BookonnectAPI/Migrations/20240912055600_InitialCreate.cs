@@ -89,7 +89,7 @@ namespace BookonnectAPI.Migrations
                 name: "Payments",
                 columns: table => new
                 {
-                    ID = table.Column<string>(type: "TEXT", nullable: false),
+                    ID = table.Column<string>(type: "VARCHAR", maxLength: 10, nullable: false),
                     DateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UserID = table.Column<int>(type: "INTEGER", nullable: false)
                 },
