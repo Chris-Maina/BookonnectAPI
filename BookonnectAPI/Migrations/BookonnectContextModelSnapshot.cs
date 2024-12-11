@@ -32,7 +32,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Accounts");
+                    b.ToTable("Accounts", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Book", b =>
@@ -66,7 +66,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("VendorID");
 
-                    b.ToTable("Books");
+                    b.ToTable("Books", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.CartItem", b =>
@@ -90,7 +90,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("CartItems");
+                    b.ToTable("CartItems", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Confirmation", b =>
@@ -117,7 +117,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Confirmations");
+                    b.ToTable("Confirmations", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Image", b =>
@@ -145,7 +145,7 @@ namespace BookonnectAPI.Migrations
                     b.HasIndex("BookID")
                         .IsUnique();
 
-                    b.ToTable("Images");
+                    b.ToTable("Images", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Order", b =>
@@ -174,7 +174,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("CustomerID");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.OrderItem", b =>
@@ -198,7 +198,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("OrderID");
 
-                    b.ToTable("OrderItems");
+                    b.ToTable("OrderItems", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Payment", b =>
@@ -233,7 +233,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("ToID");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.User", b =>
@@ -261,7 +261,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
 
                     b.HasData(
                         new

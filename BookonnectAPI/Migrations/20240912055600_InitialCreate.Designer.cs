@@ -220,8 +220,7 @@ namespace BookonnectAPI.Migrations
             modelBuilder.Entity("BookonnectAPI.Models.Payment", b =>
                 {
                     b.Property<string>("ID")
-                        .HasMaxLength(10)
-                        .HasColumnType("VARCHAR");
+                        .HasColumnType("VARCHAR(10)");
 
                     b.Property<DateTime>("DateTime")
                         .HasColumnType("TEXT");

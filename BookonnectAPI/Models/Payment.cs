@@ -12,8 +12,7 @@ public enum PaymentStatus
 
 public class Payment
 {
-    [Column(TypeName = "VARCHAR")]
-    [StringLength(10)]
+    [Column(TypeName = "VARCHAR(10)")]
     public string ID { get; set; } = string.Empty;// will store the MPESA transaction code
     public PaymentStatus Status { get; set; }  = PaymentStatus.Unverified;
     public DateTime DateTime { get; set; }
