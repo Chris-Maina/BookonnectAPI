@@ -170,7 +170,7 @@ namespace BookonnectAPI.Migrations
 
                     b.Property<string>("PaymentID")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("VARCHAR(10)");
 
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");

@@ -163,7 +163,7 @@ namespace BookonnectAPI.Migrations
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     UserID = table.Column<int>(type: "INTEGER", nullable: false),
                     DeliveryID = table.Column<int>(type: "INTEGER", nullable: false),
-                    PaymentID = table.Column<string>(type: "TEXT", nullable: false)
+                    PaymentID = table.Column<string>(type: "VARCHAR(10)", nullable: false)
                 },
                 constraints: table =>
                 {

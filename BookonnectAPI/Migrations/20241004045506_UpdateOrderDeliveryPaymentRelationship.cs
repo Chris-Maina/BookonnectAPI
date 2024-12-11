@@ -95,7 +95,7 @@ namespace BookonnectAPI.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "PaymentID",
                 table: "Orders",
-                type: "TEXT",
+                type: "VARCHAR(10)",
                 nullable: false,
                 defaultValue: "");
 
