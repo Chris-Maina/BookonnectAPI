@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace BookonnectAPI.Models;
 
@@ -6,6 +7,7 @@ public class Order
 {
 	public int ID { get; set; }
 	public float Total { get; set; }
+    [Column(TypeName = "VARCHAR(50)")]
     public string DeliveryLocation { get; set; } = String.Empty;
     public string? DeliveryInstructions { get; set; }
     public DateTime DateTime { get; set; }  

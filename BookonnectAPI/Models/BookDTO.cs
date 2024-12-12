@@ -11,5 +11,5 @@ public class BookDTO
     public int VendorID { get; set; }
     public UserDTO? Vendor { get; set; }
     public ImageDTO? Image { get; set; }
+    public bool Visible { get; set; }
 }
-
