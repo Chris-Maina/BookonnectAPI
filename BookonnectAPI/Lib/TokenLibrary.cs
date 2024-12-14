@@ -1,34 +1,33 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace BookonnectAPI.Lib;
 
 public class TokenLibrary: ITokenLibrary
 {
-    const string issuerKeyIdentifier = "Authentication:JWT:Issuer";
-    const string audienceKeyIdentifier = "Authentication:JWT:Audience";
-    const string secretKeyIdentifier = "Authentication:JWT:SecretKey";
 
     private readonly JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
-    private readonly IConfiguration _configuration;
     private readonly BookonnectContext _context;
 	public DateTime Expires { get; } = DateTime.UtcNow.AddDays(1);
+	private readonly JWTOptions _jwtOptions;
 
-    public TokenLibrary(BookonnectContext context, IConfiguration configuration)
+    public TokenLibrary(BookonnectContext context, IOptionsSnapshot<JWTOptions> jwtOptions)
 	{
 		_context = context;
-		_configuration = configuration;
+		_jwtOptions = jwtOptions.Value;
 	}
 
 	public string GetToken(int userId)
 	{
-		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration[secretKeyIdentifier]!));
+		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
 		var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-		var issuer = _configuration[issuerKeyIdentifier];
-		var audience = _configuration[audienceKeyIdentifier];
+		var issuer = _jwtOptions.Issuer;
+		var audience = _jwtOptions.Audience;
 		var claims = new[]
 		{
 			new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
@@ -84,9 +83,9 @@ public class TokenLibrary: ITokenLibrary
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = _configuration[issuerKeyIdentifier],
-            ValidAudience = _configuration[audienceKeyIdentifier],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration[secretKeyIdentifier]!))
+            ValidIssuer = _jwtOptions.Issuer,
+            ValidAudience = _jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey))
         };
     }
 }

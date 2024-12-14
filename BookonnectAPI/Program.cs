@@ -7,6 +7,7 @@ using BookonnectAPI.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 // Add services to DI container.
+builder.Services.Configure<JWTOptions>(builder.Configuration.GetSection(JWTOptions.SectionName));
 builder.Services.Configure<MailSettingsOptions>(builder.Configuration.GetSection(MailSettingsOptions.SectionName));
 builder.Services.AddControllers(options =>
 {
@@ -36,12 +38,14 @@ else {
         options.UseMySQL(builder.Configuration.GetConnectionString("AZURE_MYSQL_CONNECTIONSTRING")!));
 }
 
+JWTOptions? jWTOptions = new JWTOptions();
+jWTOptions = builder.Configuration.GetSection(JWTOptions.SectionName).Get<JWTOptions>();
 // CORS policy
 builder.Services.AddCors(options => {
     options.AddDefaultPolicy(
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000")
+            policy.WithOrigins(jWTOptions.Audience)
             .AllowAnyMethod()
             .AllowAnyHeader();
         });
@@ -58,9 +62,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration.GetValue<string>("Authentication:JWT:Issuer"),
-            ValidAudience = builder.Configuration.GetValue<string>("Authentication:JWT:Audience"),
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetValue<string>("Authentication:JWT:SecretKey")!))
+            ValidIssuer = jWTOptions.Issuer,
+            ValidAudience = jWTOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jWTOptions.SecretKey))
         };
     });
 
