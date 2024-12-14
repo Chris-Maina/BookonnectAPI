@@ -108,10 +108,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Enable CORS
-app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+// Enable CORS
+app.UseCors();
 
 app.MapControllers();
 app.Run();
