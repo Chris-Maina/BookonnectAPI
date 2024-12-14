@@ -27,7 +27,7 @@ public class BookonnectContext: DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasData(
-            new User { ID = 1, Name = _mailSettings.Name, Email = _mailSettings.EmailId, Image = "", Phone = "" });
+            new User { ID = 1, Name = _mailSettings.Name, Email = _mailSettings.EmailId, Image = _mailSettings.Picture, Phone = "" });
     }
 }
 
