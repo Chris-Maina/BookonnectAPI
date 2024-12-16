@@ -45,7 +45,7 @@ builder.Services.AddCors(options => {
     options.AddDefaultPolicy(
         policy =>
         {
-            policy.WithOrigins(jWTOptions.Audience, "https://bookonnect.vercel.app/")
+            policy.WithOrigins(jWTOptions.Audience)
             .AllowAnyMethod()
             .AllowAnyHeader();
         });
