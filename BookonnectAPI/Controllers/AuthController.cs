@@ -150,7 +150,7 @@ public class AuthController: ControllerBase
 		var emailData = new Email
 		{
 			Body = $@"<html><body>Hello <b>{receiver.Name}</b>,<br />
-            <p>Thank you for joining the Bookonnect family! We'll sort your books at an affordable price.</p><br />
+            <p>Thank you for joining the Bookonnect family! We'll help you buy affordable or sell your books.</p><br />
 			<p>Regards,<br /> Bookonnect Team.</p></body></html>",
 			Subject = "You are one of US!",
 			ToId = receiver.Email,
