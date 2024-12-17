@@ -11,11 +11,13 @@ public class MailLibrary: IMailLibrary
 {
 	private MailSettingsOptions _mailSettings;
 	private ILogger<MailLibrary> _logger;
+	private IWebHostEnvironment _environment;
 
-	public MailLibrary(IOptionsSnapshot<MailSettingsOptions> mailSettings, ILogger<MailLibrary> logger)
+	public MailLibrary(IOptionsSnapshot<MailSettingsOptions> mailSettings, ILogger<MailLibrary> logger, IWebHostEnvironment environment)
 	{
 		_mailSettings = mailSettings.Value;
 		_logger = logger;
+        _environment = environment;
     }
 
 	public async Task SendMail(Email email)
@@ -37,7 +39,7 @@ public class MailLibrary: IMailLibrary
 			emailMessage.Body = bodyBuilder.ToMessageBody();
 
 			using SmtpClient smtpClient = new SmtpClient();
-            await smtpClient.ConnectAsync(_mailSettings.Host, _mailSettings.Port, SecureSocketOptions.None);
+            await smtpClient.ConnectAsync(_mailSettings.Host, _mailSettings.Port, _environment.IsProduction() ? SecureSocketOptions.StartTls : SecureSocketOptions.None);
             await smtpClient.AuthenticateAsync(_mailSettings.UserName, _mailSettings.Password);
             await smtpClient.SendAsync(emailMessage);
             await smtpClient.DisconnectAsync(true);
