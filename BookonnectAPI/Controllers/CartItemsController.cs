@@ -184,6 +184,16 @@ namespace BookonnectAPI.Controllers
                 return Conflict(new { Message = "A cart item with the associated book exists" });
             }
 
+            bool myBookExistsInCart = _context.Books.Any(book =>
+                book.VendorID == int.Parse(userId) &&
+                book.ID == cartItemDTO.BookID);
+
+            if (myBookExistsInCart)
+            {
+                _logger.LogWarning("Added a book you own in cart");
+                return BadRequest(new { Message = "You cannnot buy your own book." });
+            }
+
             var cartItem = new CartItem
             {
                 UserID = int.Parse(userId),
