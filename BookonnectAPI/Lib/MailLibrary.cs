@@ -26,7 +26,7 @@ public class MailLibrary: IMailLibrary
 		{
 
 			MimeMessage emailMessage = new MimeMessage();
-			MailboxAddress emailFrom = new MailboxAddress(_mailSettings.Name, _mailSettings.EmailId);
+			MailboxAddress emailFrom = new MailboxAddress(email.FromName ?? _mailSettings.Name, email.FromId ?? _mailSettings.EmailId);
 			emailMessage.From.Add(emailFrom);
 
 			MailboxAddress emailTo = new MailboxAddress(email.Name, email.ToId);
