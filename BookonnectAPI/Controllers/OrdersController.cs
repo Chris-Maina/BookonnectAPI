@@ -178,7 +178,7 @@ namespace BookonnectAPI.Controllers
             {
                 _logger.LogInformation("Saving order to database");
                 await _context.SaveChangesAsync();
-                var customer = await _context.Users.FindAsync(order.CustomerID);
+                var customer = await _context.Users.FindAsync(int.Parse(userId));
                 if (customer != null)
                 {
                     // Send Order Confirmation message to customer
