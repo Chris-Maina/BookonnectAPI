@@ -50,10 +50,11 @@ namespace BookonnectAPI.Controllers
             if (orderQueryParameters.Total != null && orderQueryParameters.BookID != null)
             {
                 _logger.LogInformation("Fetching orders by logged in user and query params Total and BookID");
+                var bookIDSet = new HashSet<int>(orderQueryParameters.BookID);
                 orders = await _context.Orders
                     .Where(ord => ord.CustomerID == int.Parse(userId))
                     .Where(ord => ord.Total == orderQueryParameters.Total)
-                    .Where(ord => ord.OrderItems.Select(orderItem => orderItem.BookID).Intersect(orderQueryParameters.BookID).Count() == orderQueryParameters.BookID.Count())
+                    .Where(ord => ord.OrderItems.Where(ordItem => bookIDSet.Contains(ordItem.BookID)).Count() == orderQueryParameters.BookID.Count())
                     .Select(ord => Order.OrderToDTO(ord))
                     .ToArrayAsync();
 
@@ -144,10 +145,11 @@ namespace BookonnectAPI.Controllers
              * so instead of O(n^2) for the check, we have O(n)
              */
             var orderItemDTOBookIDs = orderDTO.OrderItems.Select(orderItemDTO => orderItemDTO.BookID);
+            var orderItemDTOBookIDSet = new HashSet<int>(orderItemDTOBookIDs);
             bool orderExists = _context.Orders.Any(ord =>
                 ord.Total == orderDTO.Total &&
                 ord.CustomerID == int.Parse(userId) &&
-                ord.OrderItems.Select(orderItem => orderItem.BookID).Intersect(orderItemDTOBookIDs).Any());
+                ord.OrderItems.Where(orderItem => orderItemDTOBookIDSet.Contains(orderItem.BookID)).Any());
 
             if (orderExists)
             {
