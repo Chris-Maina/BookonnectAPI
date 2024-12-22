@@ -208,6 +208,7 @@ namespace BookonnectAPI.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> PatchOrder(int id, [FromBody] JsonPatchDocument<Order> patchDoc)
         {
+            _logger.LogInformation("Updating order with delivery location and instructions");
             if (patchDoc == null)
             {
                 return BadRequest(ModelState);
