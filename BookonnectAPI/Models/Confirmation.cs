@@ -4,9 +4,9 @@ namespace BookonnectAPI.Models;
 
 public enum ConfirmationType
 {
-	Dispatch,
-	Receipt,
-	Cancel
+    Dispatched,
+    Received,
+    Canceled
 }
 public class Confirmation
 {
