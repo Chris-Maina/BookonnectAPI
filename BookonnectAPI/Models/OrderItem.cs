@@ -32,6 +32,7 @@ public class OrderItem
 			Quantity = orderItem.Quantity,
 			OrderID = orderItem.OrderID,
 			BookID = orderItem.BookID,
+			Order = orderItem.Order,
 			Book = orderItem.Book != null ? Book.BookToDTO(orderItem.Book) : null,
 			Confirmations = orderItem.Confirmations != null ? orderItem.Confirmations.Select(Confirmation.ConfirmationToDTO).ToList() : null,
 		};

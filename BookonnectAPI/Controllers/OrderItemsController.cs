@@ -53,6 +53,7 @@ public class OrderItemsController : ControllerBase
             orderItems = await _context.OrderItems
                 .OrderBy(ordItem => ordItem.ID)
                 .Where(ordItem => ordItem.Order != null && ordItem.Order.CustomerID == int.Parse(userID))
+                .Include(orderItem => orderItem.Order)
                 .Include(ordItem => ordItem.Confirmations)
                 .Include(ordItem => ordItem.Book)
                 .ThenInclude(bk => bk != null ? bk.Image : null)
@@ -68,6 +69,7 @@ public class OrderItemsController : ControllerBase
         orderItems = await _context.OrderItems
             .OrderBy(ordItem => ordItem.ID)
             .Where(ordItem => ordItem.Book != null && ordItem.Book.VendorID == int.Parse(userID))
+            .Include(orderItem => orderItem.Order)
             .Include(ordItem => ordItem.Confirmations)
             .Include(ordItem => ordItem.Book)
             .ThenInclude(bk => bk != null ? bk.Image : null)

@@ -6,6 +6,7 @@ public class OrderItemDTO
 	public int Quantity { get; set; }
     public int OrderID { get; set; }
     public int BookID { get; set; }
+    public Order? Order { get; set; }
     public BookDTO? Book { get; set; }
     public ICollection<ConfirmationDTO>? Confirmations { get; set; }
 }
