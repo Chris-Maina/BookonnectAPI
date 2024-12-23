@@ -233,6 +233,34 @@ public class PaymentsController : ControllerBase
 
     }
 
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult> GetPayments()
+    {
+        _logger.LogInformation("Getting payments");
+        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            _logger.LogWarning("User id not found in token");
+            return Unauthorized(new { Message = "Please sign in again." });
+        }
+
+        var bookonnectAdmin = _context.Users.Where(u => u.ID == int.Parse(userId) && u.Email == _mailSettings.EmailId).FirstOrDefault();
+        if (bookonnectAdmin == null)
+        {
+            return NotFound(new { Message = "Functionality only availabile for Admin user " });
+        }
+
+        var payments = await _context.Payments
+               .OrderBy(p => p.ID)
+               .Select(p => Payment.PaymentToDTO(p))
+               .ToArrayAsync();
+
+        return Ok(payments);
+    }
+
     private void SendPaymentVerificationRequest(Payment payment)
     {
         var emailData = new Email
