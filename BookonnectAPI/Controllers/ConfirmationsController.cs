@@ -200,7 +200,7 @@ public class ConfirmationsController: ControllerBase
     {
         switch (confirmationType)
         {
-            case ConfirmationType.Dispatch:
+            case ConfirmationType.Dispatched:
                 if (orderItem.Order?.Customer == null)
                 {
                     _logger.LogWarning("Order customer not found");
@@ -215,7 +215,7 @@ public class ConfirmationsController: ControllerBase
                 // Send customer dispatched email
                 SendDispatchEmail(orderItem.Order.Customer, orderItem.Book);
                 break;
-            case ConfirmationType.Receipt:
+            case ConfirmationType.Received:
                 if (orderItem.Book?.Vendor == null)
                 {
                     _logger.LogWarning("Book vendor not found");
