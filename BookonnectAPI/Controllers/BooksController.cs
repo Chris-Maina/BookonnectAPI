@@ -76,6 +76,7 @@ public class BooksController: ControllerBase
     public async Task<ActionResult<IEnumerable<BookDTO>>> GetBooks([FromQuery] QueryParameter queryParameter)
     {
         var books = await _context.Books
+                .Where(b => b.Visible == true)
                 .OrderBy(b => b.ID)
                 .Include(b => b.Image)
                 .Include(b => b.Vendor)
