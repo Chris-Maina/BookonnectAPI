@@ -12,4 +12,5 @@ public class BookDTO
     public UserDTO? Vendor { get; set; }
     public ImageDTO? Image { get; set; }
     public bool Visible { get; set; }
+    public BookCondition Condition { get; set; }
 }
