@@ -55,6 +55,7 @@ public class BooksController: ControllerBase
             Price = bookDTO.Price,
             Description = bookDTO.Description,
             VendorID = int.Parse(userId),
+            Condition = bookDTO.Condition,
         };
 
         _context.Books.Add(book);
@@ -62,7 +63,7 @@ public class BooksController: ControllerBase
         {
             await _context.SaveChangesAsync();
             // loading Vendor reference navigation
-            _context.Entry(book).Reference(bk => bk.Vendor).Load();
+            await _context.Entry(book).Reference(bk => bk.Vendor).LoadAsync();
             return CreatedAtAction(nameof(PostBook), new { id = book.ID }, Book.BookToDTO(book));
         } catch (Exception ex)
         {
@@ -151,7 +152,13 @@ public class BooksController: ControllerBase
             return BadRequest(new { Message = "Provided book id does not match. Check and try again" });
         }
 
-        var book = await _context.Books.FindAsync(id);
+        // Eager loading
+        var book = await _context.Books
+            .Where(b => b.ID == id)
+            .Include(b => b.Vendor)
+            .Include(bk => bk.Image)
+            .FirstOrDefaultAsync();
+
         if (book == null)
         {
             return NotFound(new { Message = "Book not found." });
@@ -162,6 +169,8 @@ public class BooksController: ControllerBase
         book.Price = bookDTO.Price;
         book.ISBN = bookDTO.ISBN;
         book.Description = bookDTO.Description;
+        book.Visible = bookDTO.Visible;
+        book.Condition = bookDTO.Condition;
 
         _context.Entry(book).State = EntityState.Modified;
         try
@@ -200,7 +209,13 @@ public class BooksController: ControllerBase
             return BadRequest(ModelState);
         }
 
-        var book = await _context.Books.Where(b => b.ID == id).Include(b => b.Vendor).FirstOrDefaultAsync();
+        // Eager loading references
+        var book = await _context.Books
+            .Where(b => b.ID == id)
+            .Include(b => b.Vendor)
+            .Include(bk => bk.Image)
+            .FirstOrDefaultAsync();
+
         if (book == null)
         {
             return NotFound(new { Message = "Book not found." });
@@ -216,7 +231,6 @@ public class BooksController: ControllerBase
         try
         {
             await _context.SaveChangesAsync();
-            _context.Entry(book).Reference(bk => bk.Vendor).Load();
             return Ok(Book.BookToDTO(book));
         }
         catch (DbUpdateConcurrencyException ex)
