@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BookonnectAPI.Controllers;
 
 [ApiController]
+[Authorize(Policy = "UserClaimPolicy")]
 [Route("/api/[controller]")]
 public class BooksController: ControllerBase
 {
@@ -21,7 +22,6 @@ public class BooksController: ControllerBase
     }
 
 	[HttpPost]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -30,15 +30,9 @@ public class BooksController: ControllerBase
     public async Task<ActionResult<BookDTO>> PostBook(BookDTO bookDTO)
 	{
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-
         if (userId == null)
         {
             return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        if (!UserExists(int.Parse(userId)))
-        {
-            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         bool bookExists = _context.Books.Any(bk => (bk.ISBN == bookDTO.ISBN && bk.Title == bookDTO.Title && bk.Author == bookDTO.Author));
@@ -62,7 +56,7 @@ public class BooksController: ControllerBase
         try
         {
             await _context.SaveChangesAsync();
-            // loading Vendor reference navigation
+            // Explicitly loading Vendor reference navigation
             await _context.Entry(book).Reference(bk => bk.Vendor).LoadAsync();
             return CreatedAtAction(nameof(PostBook), new { id = book.ID }, Book.BookToDTO(book));
         } catch (Exception ex)
@@ -73,6 +67,7 @@ public class BooksController: ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<BookDTO>>> GetBooks([FromQuery] QueryParameter queryParameter)
     {
@@ -90,7 +85,6 @@ public class BooksController: ControllerBase
     }
 
     [HttpGet("me")]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -101,12 +95,6 @@ public class BooksController: ControllerBase
         {
             _logger.LogWarning("User id not found in token");
             return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        if (!UserExists(int.Parse(userId)))
-        {
-            _logger.LogWarning("User with the provided id not found");
-            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         var books = await _context.Books
@@ -120,7 +108,6 @@ public class BooksController: ControllerBase
     }
 
     [HttpGet("{id}")]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<BookDTO>> GetBook(int id)
@@ -140,7 +127,6 @@ public class BooksController: ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -197,7 +183,6 @@ public class BooksController: ControllerBase
     }
 
     [HttpPatch("{id}")]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -251,7 +236,6 @@ public class BooksController: ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -279,7 +263,5 @@ public class BooksController: ControllerBase
     {
         return _context.Books.Any(book => book.ID == id);
     }
-
-    private bool UserExists(int id) => _context.Users.Any(user => user.ID == id);
 }
 
