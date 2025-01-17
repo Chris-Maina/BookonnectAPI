@@ -7,8 +7,8 @@ using BookonnectAPI.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
-using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +52,17 @@ builder.Services.AddCors(options => {
         });
 });
 
+// Authorization
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("UserClaimPolicy", policy =>
+    {
+        policy.Requirements.Add(new ClaimRequirement(ClaimTypes.NameIdentifier));
+    });
+});
+// register authorization handler
+builder.Services.AddSingleton<IAuthorizationHandler, ClaimValueCheckHandler>();
+
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -68,18 +79,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jWTOptions.SecretKey))
         };
     });
-
-
-// Authorization
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("UserClaimPolicy", policy =>
-    {
-        policy.Requirements.Add(new ClaimRequirement(JwtRegisteredClaimNames.Sub));
-    });
-});
-// register authorization handler
-builder.Services.AddSingleton<IAuthorizationHandler, ClaimValueCheckHandler>();
 
 // Add a named http client
 builder.Services.AddHttpClient("Safaricom", httpClient =>
