@@ -33,7 +33,7 @@ public class ClaimValueCheckHandler : AuthorizationHandler<ClaimRequirement>
              */
             if (claimValue != null &&
                 int.TryParse(claimValue, out int userID) &&
-                !bookonnectContext.Users.Any(u => u.ID == userID))
+                bookonnectContext.Users.Any(u => u.ID == userID))
             {
                 context.Succeed(requirement);
             }
@@ -42,7 +42,6 @@ public class ClaimValueCheckHandler : AuthorizationHandler<ClaimRequirement>
                 context.Fail();
             }
         }
-        
         return Task.CompletedTask;
     }
 }
