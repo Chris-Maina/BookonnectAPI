@@ -2,6 +2,7 @@
 using BookonnectAPI.Data;
 using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,7 @@ public class AuthController: ControllerBase
 	[ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status201Created)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
 	public async Task<ActionResult<UserToken>> Authenticate(Auth auth)
 	{
         Payload payload = new();
@@ -42,6 +44,11 @@ public class AuthController: ControllerBase
             {
 				Audience = new[] { _configuration["Authentication:Google:ClientId"] }
 			});
+		}
+		catch(InvalidJwtException ex)
+		{
+			_logger.LogError(ex, "Invalid idToken");
+			return BadRequest(new { Message = "Supplied token is invalid.Try again." });
 		}
         catch (Exception ex)
         {
