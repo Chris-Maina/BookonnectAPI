@@ -240,7 +240,8 @@ public class ConfirmationsController: ControllerBase
             Body = $@"<html><body>
                         <p>Hi {receiver.Name},</p>
                         <p>We've got good news! Your ordered book, {book.Title}, has been dispatched by the vendor.</p>
-                        <p> Please update the status upon receipt under My Orders.</p>
+                        <p>Upon receipt of the book, check the book condition and update the status under My Orders.</p>
+                        <p>In case of any issues, please reply to this email.</p>
 
                         <p>Warm regards,</p>
                         <p>Bookonnect Team.</p>"
