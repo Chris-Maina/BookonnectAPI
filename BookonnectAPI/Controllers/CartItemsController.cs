@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.JsonPatch;
 namespace BookonnectAPI.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Policy = "UserClaimPolicy")]
     [ApiController]
     public class CartItemsController : ControllerBase
     {
@@ -34,11 +34,6 @@ namespace BookonnectAPI.Controllers
             {
                 _logger.LogWarning("User id not found in token");
                 return Unauthorized(new { Message = "Please sign in again." });
-            }
-
-            if (!UserExists(int.Parse(userId)))
-            {
-                return NotFound(new { Message = "User not found. Sign in again." });
             }
 
             _logger.LogInformation("Fetching cart items");
@@ -171,12 +166,6 @@ namespace BookonnectAPI.Controllers
                 return Unauthorized(new { Message = "Please sign in again." });
             }
 
-            if (!UserExists(int.Parse(userId)))
-            {
-                _logger.LogWarning("Logged in user not found.");
-                return NotFound(new { Message = "User not found. Sign in again." });
-            }
-
             bool cartItemExist = _context.CartItems.Any(cartItem => cartItem.BookID == cartItemDTO.BookID && cartItem.UserID == int.Parse(userId));
             if (cartItemExist)
             {
@@ -259,12 +248,6 @@ namespace BookonnectAPI.Controllers
                 return Unauthorized(new { Message = "Please sign in again." });
             }
 
-            if (!UserExists(int.Parse(userId)))
-            {
-                _logger.LogWarning("User with id {0} not found", userId);
-                return NotFound(new { Message = "User not found. Sign in again." });
-            }
-
             try
             {
                 // retreaving the cart items to be deleted
@@ -293,7 +276,5 @@ namespace BookonnectAPI.Controllers
         {
             return _context.CartItems.Any(e => e.ID == id);
         }
-
-        private bool UserExists(int id) => _context.Users.Any(user => user.ID == id);
     }
 }

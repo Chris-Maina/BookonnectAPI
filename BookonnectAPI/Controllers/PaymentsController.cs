@@ -13,7 +13,7 @@ namespace BookonnectAPI.Controllers;
 
 [Route("/api/[controller]")]
 [ApiController]
-[Authorize]
+[Authorize(Policy = "UserClaimPolicy")]
 public class PaymentsController : ControllerBase
 {
     private readonly BookonnectContext _context;
@@ -46,12 +46,6 @@ public class PaymentsController : ControllerBase
         {
             _logger.LogWarning("User id not found in token");
             return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        if (!UserExists(int.Parse(userId)))
-        {
-            _logger.LogWarning("User with the provided id not found");
-            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         var order = await _context.Orders.FindAsync(paymentDTO.OrderID);
@@ -285,8 +279,6 @@ public class PaymentsController : ControllerBase
         _logger.LogInformation($"Sending confirm payment email to Bookonnect Admin ");
         _mailLibrary.SendMail(emailData);
     }
-
-    private bool UserExists(int id) => _context.Users.Any(user => user.ID == id);
 
     private bool PaymentExists(string? id, int? orderID, int? toUserID, int? fromUserID, float? amount) 
     {

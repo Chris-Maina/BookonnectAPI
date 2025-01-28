@@ -11,7 +11,7 @@ namespace BookonnectAPI.Controllers
 {
     [Route("/api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Policy = "UserClaimPolicy")]
     public class OrdersController : ControllerBase
     {
         private readonly BookonnectContext _context;
@@ -38,13 +38,6 @@ namespace BookonnectAPI.Controllers
                 _logger.LogWarning("No token found");
                 return Unauthorized(new { Message = "Please sign in again." });
             }
-
-            if (!UserExists(int.Parse(userId)))
-            {
-                _logger.LogWarning("User in token does not exist");
-                return NotFound(new { Message = "User not found. Sign in again." });
-            }
-
            
             OrderDTO[] orders;
             if (orderQueryParameters.Total != null && orderQueryParameters.BookID != null)
@@ -83,19 +76,6 @@ namespace BookonnectAPI.Controllers
         public async Task<ActionResult<OrderDTO>> GetOrder(int id)
         {
             _logger.LogInformation("Getting order");
-            var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null)
-            {
-                _logger.LogWarning("No token found");
-                return Unauthorized(new { Message = "Please sign in again." });
-            }
-
-            if (!UserExists(int.Parse(userId)))
-            {
-                _logger.LogWarning("User in token does not exist");
-                return NotFound(new { Message = "User not found. Sign in again." });
-            }
-
             var order = await _context.Orders
                 .Where(ord => ord.ID == id)
                 .Include(ord => ord.Customer)
@@ -131,12 +111,6 @@ namespace BookonnectAPI.Controllers
             {
                 _logger.LogWarning("There is no user id in token");
                 return Unauthorized(new { Message = "Please sign in again." });
-            }
-
-            if (!UserExists(int.Parse(userId)))
-            {
-                _logger.LogWarning("User in token does not exist");
-                return NotFound(new { Message = "User not found. Sign in again." });
             }
 
             /**
@@ -277,19 +251,6 @@ namespace BookonnectAPI.Controllers
         public async Task<ActionResult> DeleteOrder(int id)
         {
             _logger.LogInformation("Deleting order");
-            var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null)
-            {
-                _logger.LogWarning("There is no user id in token");
-                return Unauthorized(new { Message = "Please sign in again." });
-            }
-
-            if (!UserExists(int.Parse(userId)))
-            {
-                _logger.LogWarning("User in token does not exist");
-                return NotFound(new { Message = "User not found. Sign in again." });
-            }
-
             var order = await _context.Orders.FindAsync(id);
 
             if (order == null)
@@ -310,8 +271,6 @@ namespace BookonnectAPI.Controllers
         }
 
         private bool OrderExists(int id) => _context.Orders.Any(u => u.ID == id);
-
-        private bool UserExists(int id) => _context.Users.Any(u => u.ID == id);
 
         private void SendOrderConfirmationEmail(User receiver)
         {

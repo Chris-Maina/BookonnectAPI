@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BookonnectAPI.Controllers;
 
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = "UserClaimPolicy")]
 [ApiController]
 public class OrderItemsController : ControllerBase
 {
@@ -38,12 +38,6 @@ public class OrderItemsController : ControllerBase
         {
             _logger.LogWarning("No token found");
             return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        if(!UserExists(int.Parse(userID)))
-        {
-            _logger.LogWarning("User in token does not exist");
-            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         OrderItemDTO[] orderItems;
@@ -88,7 +82,5 @@ public class OrderItemsController : ControllerBase
     {
         return "value";
     }
-
-    private bool UserExists(int userID) => _context.Users.Any(u => u.ID == userID);
 }
 

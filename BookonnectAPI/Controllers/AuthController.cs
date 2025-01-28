@@ -130,7 +130,7 @@ public class AuthController: ControllerBase
     }
 
 	[HttpGet]
-	[Authorize]
+	[Authorize(Policy = "UserClaimPolicy")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status200OK)]

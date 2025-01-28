@@ -13,7 +13,7 @@ namespace BookonnectAPI.Controllers;
 
 [Route("/api/[controller]")]
 [ApiController]
-[Authorize]
+[Authorize(Policy = "UserClaimPolicy")]
 public class ConfirmationsController: ControllerBase
 {
 	private readonly BookonnectContext _context;
@@ -41,12 +41,6 @@ public class ConfirmationsController: ControllerBase
         {
             _logger.LogWarning("There is no user id in token");
             return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        if (!UserExists(int.Parse(userId)))
-        {
-            _logger.LogWarning("User in token does not exist");
-            return NotFound(new { Message = "User not found. Sign in again." });
         }
 
         var orderItem = await _context.OrderItems
@@ -101,19 +95,6 @@ public class ConfirmationsController: ControllerBase
     public async Task<ActionResult<Confirmation>> GetConfirmation(int id)
     {
         _logger.LogInformation("Get confirmation");
-        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
-        {
-            _logger.LogWarning("There is no user id in token");
-            return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        if (!UserExists(int.Parse(userId)))
-        {
-            _logger.LogWarning("User in token does not exist");
-            return NotFound(new { Message = "User not found. Sign in again." });
-        }
-
         var confirmation = await _context.Confirmations.FindAsync(id);
 
         if (confirmation == null)
@@ -132,19 +113,6 @@ public class ConfirmationsController: ControllerBase
     public async Task<ActionResult> PatchConfirmation(int id, [FromBody] JsonPatchDocument<Confirmation> patchDoc)
 	{
 		_logger.LogInformation("Updating confirmation");
-        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
-        {
-            _logger.LogWarning("There is no user id in token");
-            return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        if (!UserExists(int.Parse(userId)))
-        {
-            _logger.LogWarning("User in token does not exist");
-            return NotFound(new { Message = "User not found. Sign in again." });
-        }
-
         if (patchDoc == null)
 		{
 			return BadRequest(ModelState);
@@ -191,8 +159,6 @@ public class ConfirmationsController: ControllerBase
 
 
     }
-
-    private bool UserExists(int id) => _context.Users.Any(u => u.ID == id);
 
     private bool ConfirmationExists(int id) => _context.Confirmations.Any(u => u.ID == id);
 

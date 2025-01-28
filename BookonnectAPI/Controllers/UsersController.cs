@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BookonnectAPI.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = "UserClaimPolicy")]
 [Route("/api/[controller]")]
 public class UsersController: ControllerBase
 {

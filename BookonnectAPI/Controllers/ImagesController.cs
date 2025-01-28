@@ -1,5 +1,4 @@
-﻿using System;
-using BookonnectAPI.Data;
+﻿using BookonnectAPI.Data;
 using BookonnectAPI.Models;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
@@ -9,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BookonnectAPI.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = "UserClaimPolicy")]
 [Route("/api/[controller]")]
 public class ImagesController: ControllerBase
 {
