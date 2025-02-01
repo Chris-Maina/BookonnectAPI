@@ -25,7 +25,7 @@ namespace BookonnectAPI.Migrations
                     ID = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Quantity = table.Column<int>(type: "INTEGER", nullable: false),
-                    DateTime = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()"),
+                    DateTime = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "NOW()"),
                     Type = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
                     BookID = table.Column<int>(type: "INTEGER", nullable: false)
                 },
