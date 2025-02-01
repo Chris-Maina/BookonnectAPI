@@ -46,8 +46,8 @@ namespace BookonnectAPI.Migrations
             //    column: "BookID");
 
             migrationBuilder.Sql(@"
-                 INSERT INTO InventoryLogs(Quantity, BookID)
-                 SELECT Quantity, ID
+                 INSERT INTO InventoryLogs(Quantity, BookID, DateTime)
+                 SELECT Quantity, ID, NOW()
                  FROM Books;
                 ");
         }
