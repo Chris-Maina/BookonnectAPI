@@ -11,12 +11,12 @@ namespace BookonnectAPI.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            //migrationBuilder.AddColumn<int>(
-            //    name: "Quantity",
-            //    table: "Books",
-            //    type: "INTEGER",
-            //    nullable: false,
-            //    defaultValue: 1);
+            migrationBuilder.AddColumn<int>(
+                name: "Quantity",
+                table: "Books",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: 1);
 
             migrationBuilder.CreateTable(
                 name: "InventoryLogs",
@@ -25,7 +25,7 @@ namespace BookonnectAPI.Migrations
                     ID = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Quantity = table.Column<int>(type: "INTEGER", nullable: false),
-                    DateTime = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "GETDATE()"),
+                    DateTime = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()"),
                     Type = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
                     BookID = table.Column<int>(type: "INTEGER", nullable: false)
                 },
@@ -62,9 +62,9 @@ namespace BookonnectAPI.Migrations
             migrationBuilder.DropTable(
                 name: "InventoryLogs");
 
-            //migrationBuilder.DropColumn(
-            //    name: "Quantity",
-            //    table: "Books");
+            migrationBuilder.DropColumn(
+                name: "Quantity",
+                table: "Books");
         }
     }
 }
