@@ -18,32 +18,32 @@ namespace BookonnectAPI.Migrations
             //    nullable: false,
             //    defaultValue: 1);
 
-            migrationBuilder.CreateTable(
-                name: "InventoryLogs",
-                columns: table => new
-                {
-                    ID = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Quantity = table.Column<int>(type: "INTEGER", nullable: false),
-                    DateTime = table.Column<DateTime>(type: "timestamp", nullable: false),
-                    Type = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
-                    BookID = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_InventoryLogs", x => x.ID);
-                    table.ForeignKey(
-                        name: "FK_InventoryLogs_Books_BookID",
-                        column: x => x.BookID,
-                        principalTable: "Books",
-                        principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            //migrationBuilder.CreateTable(
+            //    name: "InventoryLogs",
+            //    columns: table => new
+            //    {
+            //        ID = table.Column<int>(type: "INTEGER", nullable: false)
+            //            .Annotation("Sqlite:Autoincrement", true),
+            //        Quantity = table.Column<int>(type: "INTEGER", nullable: false),
+            //        DateTime = table.Column<DateTime>(type: "timestamp", nullable: false),
+            //        Type = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
+            //        BookID = table.Column<int>(type: "INTEGER", nullable: false)
+            //    },
+            //    constraints: table =>
+            //    {
+            //        table.PrimaryKey("PK_InventoryLogs", x => x.ID);
+            //        table.ForeignKey(
+            //            name: "FK_InventoryLogs_Books_BookID",
+            //            column: x => x.BookID,
+            //            principalTable: "Books",
+            //            principalColumn: "ID",
+            //            onDelete: ReferentialAction.Cascade);
+            //    });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_InventoryLogs_BookID",
-                table: "InventoryLogs",
-                column: "BookID");
+            //migrationBuilder.CreateIndex(
+            //    name: "IX_InventoryLogs_BookID",
+            //    table: "InventoryLogs",
+            //    column: "BookID");
 
             migrationBuilder.Sql(@"
                  INSERT INTO InventoryLogs(Quantity, BookID)
@@ -59,8 +59,8 @@ namespace BookonnectAPI.Migrations
                 DELETE * FROM InventoryLogs;
             ");
 
-            migrationBuilder.DropTable(
-                name: "InventoryLogs");
+            //migrationBuilder.DropTable(
+            //    name: "InventoryLogs");
 
             //migrationBuilder.DropColumn(
             //    name: "Quantity",
