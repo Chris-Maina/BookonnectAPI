@@ -29,6 +29,7 @@ public class BooksController: ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<BookDTO>> PostBook(BookDTO bookDTO)
 	{
+        _logger.LogInformation("Posting a book");
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
         {
@@ -41,27 +42,48 @@ public class BooksController: ControllerBase
             return Conflict(new { Message = "Book already exists." });
         }
 
-        var book = new Book
+        using (var transaction = await _context.Database.BeginTransactionAsync())
         {
-            Title = bookDTO.Title,
-            Author = bookDTO.Author,
-            ISBN = bookDTO.ISBN,
-            Price = bookDTO.Price,
-            Description = bookDTO.Description,
-            VendorID = int.Parse(userId),
-            Condition = bookDTO.Condition,
-        };
+            try
+            {
+                var book = new Book
+                {
+                    Title = bookDTO.Title,
+                    Author = bookDTO.Author,
+                    ISBN = bookDTO.ISBN,
+                    Price = bookDTO.Price,
+                    Description = bookDTO.Description,
+                    VendorID = int.Parse(userId),
+                    Condition = bookDTO.Condition,
+                    Quantity = bookDTO.Quantity,
+                };
+                _context.Books.Add(book);
+                await _context.SaveChangesAsync();
 
-        _context.Books.Add(book);
-        try
-        {
-            await _context.SaveChangesAsync();
-            // Explicitly loading Vendor reference navigation
-            await _context.Entry(book).Reference(bk => bk.Vendor).LoadAsync();
-            return CreatedAtAction(nameof(PostBook), new { id = book.ID }, Book.BookToDTO(book));
-        } catch (Exception ex)
-        {
-            return StatusCode(500, ex.Message);
+                var inventoryLog = new InventoryLog
+                {
+                    BookID = book.ID,
+                    Quantity = bookDTO.Quantity,
+                    Type = ChangeType.InitialStock,
+                    DateTime = DateTime.Now
+                };
+                _context.InventoryLogs.Add(inventoryLog);
+                await _context.SaveChangesAsync();
+
+                // Commit transaction if all operations succeed
+                await transaction.CommitAsync();
+
+                // Explicitly loading Vendor reference navigation
+                await _context.Entry(book).Reference(bk => bk.Vendor).LoadAsync();
+                return CreatedAtAction(nameof(PostBook), new { id = book.ID }, Book.BookToDTO(book));
+
+            } catch (Exception ex)
+            {
+                // Rollback transaction if any operation fails
+                await transaction.RollbackAsync();
+                return StatusCode(500, ex.Message);
+            }
+
         }
        
     }
@@ -71,8 +93,9 @@ public class BooksController: ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<BookDTO>>> GetBooks([FromQuery] QueryParameter queryParameter)
     {
+        _logger.LogInformation("Getting books");
         var books = await _context.Books
-                .Where(b => b.Visible == true)
+                .Where(b => b.Visible == true && b.Quantity > 0)
                 .OrderBy(b => b.ID)
                 .Include(b => b.Image)
                 .Include(b => b.Vendor)
@@ -90,6 +113,7 @@ public class BooksController: ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<BookDTO>>> GetMyBooks()
     {
+        _logger.LogInformation("Getting my books");
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null)
         {
@@ -112,6 +136,7 @@ public class BooksController: ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<BookDTO>> GetBook(int id)
     {
+        _logger.LogInformation("Getting book with id {0}", id);
         var book = await _context.Books
             .Where(b => b.ID == id)
             .Include(b => b.Image)
@@ -130,20 +155,17 @@ public class BooksController: ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult> PutBook(int id, [FromQuery] BookDTO bookDTO)
     {
+        _logger.LogInformation($"Updating book with id {id}");
         if (id != bookDTO.ID)
         {
             return BadRequest(new { Message = "Provided book id does not match. Check and try again" });
         }
 
-        // Eager loading
-        var book = await _context.Books
-            .Where(b => b.ID == id)
-            .Include(b => b.Vendor)
-            .Include(bk => bk.Image)
-            .FirstOrDefaultAsync();
+        var book = await _context.Books.FindAsync(id);
 
         if (book == null)
         {
@@ -154,31 +176,61 @@ public class BooksController: ControllerBase
         book.Author = bookDTO.Author;
         book.Price = bookDTO.Price;
         book.ISBN = bookDTO.ISBN;
-        book.Description = bookDTO.Description;
         book.Visible = bookDTO.Visible;
         book.Condition = bookDTO.Condition;
-
-        _context.Entry(book).State = EntityState.Modified;
-        try
+        book.Quantity = bookDTO.Quantity;
+        if (bookDTO.Description != null)
         {
-            await _context.SaveChangesAsync();
-            return NoContent();
-
+            book.Description = bookDTO.Description;
         }
-        catch (DbUpdateConcurrencyException ex)
+
+        using (var transaction = await _context.Database.BeginTransactionAsync())
         {
-            if (!BookExists(id))
+            try
             {
-                return NotFound(new { Message = "Book not found." });
+                _context.Entry(book).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+
+                // Get difference and create a new Inventory Log i.e an addition/subtraction
+                int quantityAdjustment = bookDTO.Quantity - book.Quantity;
+                if (quantityAdjustment != 0)
+                {
+                    var inventoryLog = new InventoryLog
+                    {
+                        BookID = book.ID,
+                        Quantity = bookDTO.Quantity - book.Quantity,
+                        Type = ChangeType.Adjustment,
+                        DateTime = DateTime.Now
+                    };
+                    _context.InventoryLogs.Add(inventoryLog);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Commit transaction
+                await transaction.CommitAsync();
+
+                return NoContent();
             }
-            else
+            catch (DbUpdateConcurrencyException)
             {
+                // Rollback
+                await transaction.RollbackAsync();
+                if (!BookExists(id))
+                {
+                    return NotFound(new { Message = "Book not found." });
+                }
+                else
+                {
+                    return Conflict();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Rollback
+                await transaction.RollbackAsync();
                 return StatusCode(500, ex.Message);
             }
-        }
-        catch(Exception ex)
-        {
-            return StatusCode(500, ex.Message);
         }
     }
 
@@ -186,9 +238,11 @@ public class BooksController: ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<BookDTO>> PatchBook(int id, [FromBody] JsonPatchDocument<Book> patchDoc)
     {
+        _logger.LogInformation($"Patching book with id {id}");
         if (patchDoc == null)
         {
             return BadRequest(ModelState);
@@ -206,6 +260,60 @@ public class BooksController: ControllerBase
             return NotFound(new { Message = "Book not found." });
         }
 
+        // check if quantity is in the patch document
+        var quantityOperation = patchDoc.Operations.FirstOrDefault(op => op.path.Equals("/quantity", StringComparison.OrdinalIgnoreCase));
+        if (quantityOperation != null)
+        {
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    // Get difference and create a new Inventory Log i.e an addition/subtraction
+                    int newQuantity = Convert.ToInt32(quantityOperation.value);
+                    var inventoryLog = new InventoryLog
+                    {
+                        BookID = id,
+                        Quantity = newQuantity - book.Quantity,
+                        Type = ChangeType.Adjustment,
+                        DateTime = DateTime.Now
+                    };
+                    _context.InventoryLogs.Add(inventoryLog);
+                    await _context.SaveChangesAsync();
+
+                    patchDoc.ApplyTo(book, ModelState);
+                    if (!ModelState.IsValid)
+                    {
+                        return BadRequest(ModelState);
+                    }
+
+                    _context.Update(book);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+                    return Ok(Book.BookToDTO(book));
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    // Rollback
+                    await transaction.RollbackAsync();
+                    if (!BookExists(id))
+                    {
+                        return NotFound(new { Message = "Book not found." });
+                    }
+                    else
+                    {
+                        return Conflict();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Rollback
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, ex.Message);
+                }
+            }
+        }
+
         patchDoc.ApplyTo(book, ModelState);
         if (!ModelState.IsValid)
         {
@@ -218,7 +326,7 @@ public class BooksController: ControllerBase
             await _context.SaveChangesAsync();
             return Ok(Book.BookToDTO(book));
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (DbUpdateConcurrencyException)
         {
             if (!BookExists(id))
             {
@@ -226,7 +334,7 @@ public class BooksController: ControllerBase
             }
             else
             {
-                return StatusCode(500, ex.Message);
+                return Conflict();
             }
         }
         catch (Exception ex)
@@ -241,22 +349,41 @@ public class BooksController: ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult> DeleteBook(int id)
     {
+        _logger.LogInformation($"Deleting book with id {id}");
         var book = await _context.Books.FindAsync(id);
         if (book == null)
         {
             return NotFound(new { Message = "Book not found." });
         }
 
-        _context.Books.Remove(book);
-        try
+        using (var transaction = await _context.Database.BeginTransactionAsync())
         {
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ex.Message);
-        }
+            try
+            {
+                _context.Books.Remove(book);
+                await _context.SaveChangesAsync();
+
+                // Update change quantity to -currentQuantity
+                var inventoryLog = new InventoryLog
+                {
+                    BookID = book.ID,
+                    DateTime = DateTime.Now,
+                    Type = ChangeType.Deletion,
+                    Quantity = -book.Quantity
+                };
+
+                _context.InventoryLogs.Add(inventoryLog);
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, ex.Message);
+            }
+        }   
     }
 
     private bool BookExists(int id)
