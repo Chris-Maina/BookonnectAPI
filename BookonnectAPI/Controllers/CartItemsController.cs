@@ -72,12 +72,28 @@ namespace BookonnectAPI.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> PutCartItem(int id, CartItem cartItem)
+        public async Task<IActionResult> PutCartItem(int id, CartItemDTO cartItemDTO)
         {
-            if (id != cartItem.ID)
+            if (id != cartItemDTO.ID)
             {
-                _logger.LogWarning("ID in params {0} does not match cart item id {1}", id, cartItem.ID);
+                _logger.LogWarning("ID in params {0} does not match cart item id {1}", id, cartItemDTO.ID);
                 return BadRequest(new { message = "Wrong book id in URL. Check and try again." });
+            }
+
+            var cartItem = await _context.CartItems
+                .Where(ci => ci.ID == id)
+                .Include(ci => ci.Book)
+                .FirstOrDefaultAsync();
+
+            if (cartItem == null)
+            {
+                return NotFound(new { Message = "Cart item not found." });
+            }
+
+            // check if quantity is greater than stock quantity
+            if (cartItemDTO.Quantity > cartItem.Book?.Quantity)
+            {
+                return BadRequest(new { Message = "Cannot order more than what is in stock" });
             }
 
             _context.Entry(cartItem).State = EntityState.Modified;
@@ -112,10 +128,20 @@ namespace BookonnectAPI.Controllers
                 return BadRequest(ModelState);
             }
 
-            var cartItem = await _context.CartItems.FindAsync(id);
+            var cartItem = await _context.CartItems
+                .Where(ci => ci.ID == id)
+                .Include(ci => ci.Book)
+                .FirstOrDefaultAsync();
+
             if (cartItem == null)
             {
                 return NotFound(new { Message = "Cart item not found." });
+            }
+
+            // check if quantity is greater than stock quantity
+            if (cartItem.Quantity > cartItem.Book?.Quantity)
+            {
+                return BadRequest(new { Message = "Cannot order more than what is in stock" });
             }
 
             patchDoc.ApplyTo(cartItem, ModelState);
@@ -181,6 +207,16 @@ namespace BookonnectAPI.Controllers
             {
                 _logger.LogWarning("Added a book you own in cart");
                 return BadRequest(new { Message = "You cannnot buy your own book." });
+            }
+
+            bool isQuantityMoreThanStockQuantity = _context.Books.Any(book =>
+                book.ID == cartItemDTO.BookID &&
+                cartItemDTO.Quantity > book.Quantity);
+
+            if (isQuantityMoreThanStockQuantity)
+            {
+                _logger.LogWarning("Cannot order more than what is in stock");
+                return BadRequest(new { Message = "You cannnot order more than what is in stock." });
             }
 
             var cartItem = new CartItem
