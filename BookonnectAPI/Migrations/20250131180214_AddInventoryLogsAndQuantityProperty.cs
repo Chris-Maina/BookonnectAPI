@@ -11,12 +11,12 @@ namespace BookonnectAPI.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "Quantity",
-                table: "Books",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: 1);
+            //migrationBuilder.AddColumn<int>(
+            //    name: "Quantity",
+            //    table: "Books",
+            //    type: "INTEGER",
+            //    nullable: false,
+            //    defaultValue: 1);
 
             migrationBuilder.CreateTable(
                 name: "InventoryLogs",
@@ -62,9 +62,9 @@ namespace BookonnectAPI.Migrations
             migrationBuilder.DropTable(
                 name: "InventoryLogs");
 
-            migrationBuilder.DropColumn(
-                name: "Quantity",
-                table: "Books");
+            //migrationBuilder.DropColumn(
+            //    name: "Quantity",
+            //    table: "Books");
         }
     }
 }
