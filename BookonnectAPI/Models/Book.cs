@@ -26,6 +26,7 @@ public class Book
     public string? Description { get; set; }
     public bool Visible { get; set; } = true;
     public BookCondition Condition { get; set; } = BookCondition.Good;
+    public int Quantity { get; set; } = 1;
 
     public int VendorID { get; set; } // Required foreign key property. Indicates the owner/vendor of the book
     [JsonIgnore]
@@ -47,5 +48,6 @@ public class Book
             Visible = book.Visible,
             Image = book.Image != null ? Image.ImageToDTO(book.Image) : null,
             Condition = book.Condition,
+            Quantity = book.Quantity,
         };
 }

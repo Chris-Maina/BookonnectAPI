@@ -13,4 +13,5 @@ public class BookDTO
     public ImageDTO? Image { get; set; }
     public bool Visible { get; set; }
     public BookCondition Condition { get; set; }
+    public int Quantity { get; set; }
 }
