@@ -23,11 +23,14 @@ public class BookonnectContext: DbContext
     public DbSet<Payment> Payments { get; set; }
 	public DbSet<CartItem> CartItems { get; set; }
     public DbSet<Confirmation> Confirmations { get; set; }
+    public DbSet<InventoryLog> InventoryLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasData(
             new User { ID = 1, Name = _mailSettings.Name, Email = _mailSettings.EmailId, Image = _mailSettings.Picture, Phone = "" });
+
+        modelBuilder.ApplyConfiguration(new InventoryLogConfiguration());
     }
 }
 

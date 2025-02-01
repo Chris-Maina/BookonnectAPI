@@ -3,6 +3,7 @@ using System;
 using BookonnectAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookonnectAPI.Migrations
 {
     [DbContext(typeof(BookonnectContext))]
-    partial class BookonnectContextModelSnapshot : ModelSnapshot
+    [Migration("20250131180214_AddInventoryLogsAndQuantityProperty")]
+    partial class AddInventoryLogsAndQuantityProperty
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.7");
@@ -32,7 +35,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Accounts", (string)null);
+                    b.ToTable("Accounts");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Book", b =>
@@ -75,7 +78,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("VendorID");
 
-                    b.ToTable("Books", (string)null);
+                    b.ToTable("Books");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.CartItem", b =>
@@ -99,7 +102,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("CartItems", (string)null);
+                    b.ToTable("CartItems");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Confirmation", b =>
@@ -126,7 +129,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Confirmations", (string)null);
+                    b.ToTable("Confirmations");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Image", b =>
@@ -154,7 +157,7 @@ namespace BookonnectAPI.Migrations
                     b.HasIndex("BookID")
                         .IsUnique();
 
-                    b.ToTable("Images", (string)null);
+                    b.ToTable("Images");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.InventoryLog", b =>
@@ -183,7 +186,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("BookID");
 
-                    b.ToTable("InventoryLogs", (string)null);
+                    b.ToTable("InventoryLogs");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Order", b =>
@@ -212,7 +215,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("CustomerID");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.OrderItem", b =>
@@ -236,7 +239,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("OrderID");
 
-                    b.ToTable("OrderItems", (string)null);
+                    b.ToTable("OrderItems");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Payment", b =>
@@ -270,7 +273,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("ToID");
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.User", b =>
@@ -298,7 +301,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
 
                     b.HasData(
                         new
