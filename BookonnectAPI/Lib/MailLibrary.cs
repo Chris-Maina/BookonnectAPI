@@ -13,7 +13,7 @@ public class MailLibrary: IMailLibrary
 	private ILogger<MailLibrary> _logger;
 	private IWebHostEnvironment _environment;
 
-	public MailLibrary(IOptionsSnapshot<MailSettingsOptions> mailSettings, ILogger<MailLibrary> logger, IWebHostEnvironment environment)
+	public MailLibrary(IOptions<MailSettingsOptions> mailSettings, ILogger<MailLibrary> logger, IWebHostEnvironment environment)
 	{
 		_mailSettings = mailSettings.Value;
 		_logger = logger;

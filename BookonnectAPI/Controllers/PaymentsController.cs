@@ -22,7 +22,7 @@ public class PaymentsController : ControllerBase
     private readonly MailSettingsOptions _mailSettings;
     private readonly IMailLibrary _mailLibrary;
 
-    public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger, IOptionsSnapshot<MailSettingsOptions> mailSettings, IMailLibrary mailLibrary)
+    public PaymentsController(BookonnectContext context, IHttpClientFactory httpClientFactory, ILogger<PaymentsController> logger, IOptions<MailSettingsOptions> mailSettings, IMailLibrary mailLibrary)
     {
         _context = context;
         _httpClientFactory = httpClientFactory;
