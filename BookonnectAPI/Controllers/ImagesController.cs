@@ -1,9 +1,11 @@
-﻿using BookonnectAPI.Data;
+﻿using BookonnectAPI.Configuration;
+using BookonnectAPI.Data;
 using BookonnectAPI.Models;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace BookonnectAPI.Controllers;
 
@@ -14,10 +16,10 @@ public class ImagesController: ControllerBase
 {
 	private readonly Cloudinary _cloudinary;
 	private readonly BookonnectContext _context;
-    public ImagesController(BookonnectContext context, IConfiguration configuration)
+    public ImagesController(BookonnectContext context, IOptions<StorageOptions> options)
 	{
 		_context = context;
-        _cloudinary = new Cloudinary(configuration["Storage:CloudinaryURL"]);
+        _cloudinary = new Cloudinary(options.Value.CloudinaryURL);
         _cloudinary.Api.Secure = true;
 	}
 

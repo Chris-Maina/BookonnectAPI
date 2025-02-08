@@ -19,6 +19,8 @@ builder.Logging.AddConsole();
 // Add services to DI container.
 builder.Services.Configure<JWTOptions>(builder.Configuration.GetSection(JWTOptions.SectionName));
 builder.Services.Configure<MailSettingsOptions>(builder.Configuration.GetSection(MailSettingsOptions.SectionName));
+builder.Services.Configure<GoogleOptions>(builder.Configuration.GetSection(GoogleOptions.SectionName));
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
 builder.Services.AddControllers(options =>
 {
     options.InputFormatters.Insert(0, BookonnectJPIF.GetJsonPatchInputFormatter());

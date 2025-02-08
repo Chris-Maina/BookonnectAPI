@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
 using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
@@ -6,6 +7,7 @@ using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using static Google.Apis.Auth.GoogleJsonWebSignature;
 
 namespace BookonnectAPI.Controllers;
@@ -15,17 +17,17 @@ namespace BookonnectAPI.Controllers;
 public class AuthController: ControllerBase
 {
 	private readonly BookonnectContext _context;
-	private readonly IConfiguration _configuration;
 	private readonly ITokenLibrary _tokenLibrary;
 	private readonly ILogger<AuthController> _logger;
 	private readonly IMailLibrary _mailLibrary;
-	public AuthController(BookonnectContext context, IConfiguration configuration, ITokenLibrary tokenLibrary, ILogger<AuthController> logger, IMailLibrary mailLibrary)
+	private readonly GoogleOptions _options;
+	public AuthController(BookonnectContext context, ITokenLibrary tokenLibrary, ILogger<AuthController> logger, IMailLibrary mailLibrary, IOptions<GoogleOptions> options)
 	{
 		_context = context;
-        _configuration = configuration;
 		_tokenLibrary = tokenLibrary;
 		_logger = logger;
 		_mailLibrary = mailLibrary;
+		_options = options.Value;
     }
 
 
@@ -42,7 +44,7 @@ public class AuthController: ControllerBase
 			_logger.LogInformation("Validating Google token");
 			payload = await ValidateAsync(auth.IdToken, new ValidationSettings
             {
-				Audience = new[] { _configuration["Authentication:Google:ClientId"] }
+				Audience = new[] { _options.ClientId }
 			});
 		}
 		catch(InvalidJwtException ex)
