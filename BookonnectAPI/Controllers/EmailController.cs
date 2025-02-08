@@ -7,7 +7,8 @@ using Microsoft.Extensions.Options;
 namespace BookonnectAPI.Controllers;
 
 [ApiController]
-[Route("/api/[controller]")]
+[Route("/api/v{version:apiVersion}/[controller]")]
+[ApiVersion("1.0")]
 public class EmailController: ControllerBase
 {
     private readonly IMailLibrary _mailLibrary;

@@ -9,7 +9,8 @@ namespace BookonnectAPI.Controllers;
 
 [ApiController]
 [Authorize(Policy = "UserClaimPolicy")]
-[Route("/api/[controller]")]
+[Route("/api/v{version:apiVersion}/[controller]")]
+[ApiVersion("1.0")]
 public class UsersController: ControllerBase
 {
 	private readonly BookonnectContext _context;

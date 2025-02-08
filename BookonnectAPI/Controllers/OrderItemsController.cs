@@ -9,9 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BookonnectAPI.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 [Authorize(Policy = "UserClaimPolicy")]
 [ApiController]
+[ApiVersion("1.0")]
 public class OrderItemsController : ControllerBase
 {
     private readonly BookonnectContext _context;

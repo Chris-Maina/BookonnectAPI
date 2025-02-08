@@ -9,6 +9,8 @@ using System.Text;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Versioning;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,15 +18,25 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-// Add services to DI container.
+// Register options.
 builder.Services.Configure<JWTOptions>(builder.Configuration.GetSection(JWTOptions.SectionName));
 builder.Services.Configure<MailSettingsOptions>(builder.Configuration.GetSection(MailSettingsOptions.SectionName));
 builder.Services.Configure<GoogleOptions>(builder.Configuration.GetSection(GoogleOptions.SectionName));
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
+
+// Versioning
+builder.Services.AddApiVersioning(opt =>
+{
+    opt.DefaultApiVersion = new ApiVersion(1, 0); // Default version if not specified
+    opt.AssumeDefaultVersionWhenUnspecified = true; // Use default if no version provided
+    opt.ReportApiVersions = true; // Include version info in response headers
+    opt.ApiVersionReader = new UrlSegmentApiVersionReader();
+});
 builder.Services.AddControllers(options =>
 {
     options.InputFormatters.Insert(0, BookonnectJPIF.GetJsonPatchInputFormatter());
 });
+
 builder.Services.AddScoped<ITokenLibrary, TokenLibrary>();
 builder.Services.AddScoped<IMpesaLibrary, MpesaLibrary>();
 builder.Services.AddScoped<IMailLibrary, MailLibrary>();

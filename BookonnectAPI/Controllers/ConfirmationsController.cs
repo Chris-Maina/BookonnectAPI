@@ -11,9 +11,10 @@ using Microsoft.Extensions.Options;
 
 namespace BookonnectAPI.Controllers;
 
-[Route("/api/[controller]")]
+[Route("/api/v{version:apiVersion}/[controller]")]
 [ApiController]
 [Authorize(Policy = "UserClaimPolicy")]
+[ApiVersion("1.0")]
 public class ConfirmationsController: ControllerBase
 {
 	private readonly BookonnectContext _context;
