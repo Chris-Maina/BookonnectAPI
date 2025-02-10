@@ -37,10 +37,16 @@ public class BooksController: ControllerBase
             return Unauthorized(new { Message = "Please sign in again." });
         }
 
-        bool bookExists = _context.Books.Any(bk => (bk.ISBN == bookDTO.ISBN && bk.Title == bookDTO.Title && bk.Author == bookDTO.Author));
+        // Book is a duplicate if uploaded by the same person
+        bool bookExists = _context.Books.Any(bk => (
+            bk.ISBN == bookDTO.ISBN &&
+            bk.Title == bookDTO.Title &&
+            bk.Author == bookDTO.Author &&
+            bk.VendorID == int.Parse(userId)
+        ));
         if (bookExists)
         {
-            return Conflict(new { Message = "Book already exists." });
+            return Conflict(new { Message = "Book already exists. Update it instead." });
         }
 
         using (var transaction = await _context.Database.BeginTransactionAsync())
