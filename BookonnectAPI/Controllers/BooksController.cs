@@ -367,7 +367,10 @@ public class BooksController: ControllerBase
         {
             try
             {
-                _context.Books.Remove(book);
+                // Change stock quantity to 0 and visibility to false
+                book.Quantity = 0;
+                book.Visible = false;
+                _context.Entry(book).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
                 // Update change quantity to -currentQuantity
