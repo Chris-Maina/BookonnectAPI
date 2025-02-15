@@ -40,6 +40,7 @@ public class Payment
             ToID = payment.ToID,
             To = payment.To,
             OrderID = payment.OrderID,
+            Status = payment.Status,
         };
     }
 

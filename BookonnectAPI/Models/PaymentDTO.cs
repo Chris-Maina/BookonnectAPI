@@ -10,5 +10,6 @@ public class PaymentDTO
     public User? From { get; set; }
     public int ToID { get; set; }
     public User? To { get; set; }
+    public PaymentStatus? Status { get; set; }
 }
 
