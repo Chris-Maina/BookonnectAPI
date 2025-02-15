@@ -302,9 +302,11 @@ namespace BookonnectAPI.Controllers
                 Body = $@"<html><body>
                         <p>Hi {receiver.Name},</p>
                         <p>We've got good news! Your book has been order.</p>
-                        <p>Please deliver the book using details:
+                        <p>Please deliver the book using the details below:
+                                To: {order.Customer?.Name}
+                                Contact: {order.Customer?.Phone}
                                 Location: {order.DeliveryLocation}
-                                Instructions: {order.DeliveryInstructions}
+                                Delivery Instructions: {order.DeliveryInstructions}
                         </p>
                         <p> Please update the status upon dispatch in your Profile.</p>
 

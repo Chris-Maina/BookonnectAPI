@@ -56,7 +56,7 @@ public class PaymentsController : ControllerBase
             return NotFound(new { Message = "Order not found. Try again." });
         }
 
-        if (PaymentExists(paymentDTO.ID, null, null, null, order.Total))
+        if (PaymentExists(paymentDTO.ID, paymentDTO.OrderID, null, null, order.Total))
         {
             _logger.LogInformation("Found an existing payment with the ID {0}", paymentDTO.ID);
             return Conflict(new { Message = "Payment already exists" });
@@ -65,10 +65,9 @@ public class PaymentsController : ControllerBase
         var bookonnectAdmin = _context.Users.Where(u => u.Email == _mailSettings.EmailId).FirstOrDefault();
         if (bookonnectAdmin == null)
         {
-            return NotFound(new { Message = "Could not find Bookonnect admin payment details.Try again" });
+            return NotFound(new { Message = "Could not find some payment details.Try again later" });
         }
-
-        // Send BookAdmin notification to verify payment. List MPESA ref & amount and/or timestamp 
+ 
         var payment = new Payment
         {
             ID = paymentDTO.ID,
@@ -83,6 +82,7 @@ public class PaymentsController : ControllerBase
         try
         {
             await _context.SaveChangesAsync();
+            // Send BookAdmin notification to verify payment. List MPESA ref & amount and/or timestamp
             SendPaymentVerificationRequest(payment);
             return CreatedAtAction(nameof(PostPayment), new { id = payment.ID }, Payment.PaymentToDTO(payment));
         }
@@ -161,7 +161,7 @@ public class PaymentsController : ControllerBase
 
 
     // POST: api/Payments/owner
-    // Sends payment request to Mpesa
+    // Sends payment request to book owner
     // Functionality only available to admin
     [HttpPost]
     [Route("Owner")]
@@ -208,7 +208,7 @@ public class PaymentsController : ControllerBase
             FromID = bookonnectAdmin.ID,
             ToID = orderItem.Book.VendorID,
             Amount = paymentDTO.Amount,
-            DateTime = paymentDTO.DateTime,
+            DateTime = DateTime.Now,
             OrderID = orderItem.OrderID,
             Status = PaymentStatus.Verified,
         };
@@ -283,6 +283,11 @@ public class PaymentsController : ControllerBase
 
     private bool PaymentExists(string? id, int? orderID, int? toUserID, int? fromUserID, float? amount) 
     {
+        if (id != null && orderID != null)
+        {
+            return _context.Payments.Any(p => p.ID == id && p.OrderID == orderID);
+        }
+
         if (id != null)
         {
             return _context.Payments.Any(p => p.ID == id);
