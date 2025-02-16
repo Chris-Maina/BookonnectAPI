@@ -67,7 +67,6 @@ public class PaymentsController : ControllerBase
         {
             return NotFound(new { Message = "Could not find some payment details.Try again later" });
         }
- 
         var payment = new Payment
         {
             ID = paymentDTO.ID,

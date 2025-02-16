@@ -294,6 +294,7 @@ namespace BookonnectAPI.Controllers
 
         private void SendOrderDispatchEmail(User receiver, Order order)
         {
+            var contact = string.IsNullOrEmpty(order.Customer?.Phone) ? order.Customer?.Email : order.Customer?.Phone;
             var emailData = new Email
             {
                 Subject = "Deliver the book",
@@ -304,7 +305,7 @@ namespace BookonnectAPI.Controllers
                         <p>We've got good news! Your book has been order.</p>
                         <p>Please deliver the book using the details below:
                                 To: {order.Customer?.Name}
-                                Contact: {order.Customer?.Phone}
+                                Contact: {contact}
                                 Location: {order.DeliveryLocation}
                                 Delivery Instructions: {order.DeliveryInstructions}
                         </p>
