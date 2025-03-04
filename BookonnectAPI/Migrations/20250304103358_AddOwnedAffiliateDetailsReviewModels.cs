@@ -18,8 +18,7 @@ namespace BookonnectAPI.Migrations
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
-                        //.Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true),
                     Link = table.Column<string>(type: "TEXT", nullable: false),
                     SourceID = table.Column<string>(type: "TEXT", nullable: false),
                     Source = table.Column<string>(type: "VARCHAR(20)", nullable: false),
@@ -41,8 +40,7 @@ namespace BookonnectAPI.Migrations
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
-                        //.Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true),
                     VendorID = table.Column<int>(type: "INTEGER", nullable: false),
                     BookID = table.Column<int>(type: "INTEGER", nullable: false)
                 },
@@ -68,8 +66,7 @@ namespace BookonnectAPI.Migrations
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "INTEGER", nullable: false)
-                    .Annotation("MySql:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
-                    //.Annotation("Sqlite:Autoincrement", true),
+                    .Annotation("Sqlite:Autoincrement", true),
                     Text = table.Column<string>(type: "TEXT", nullable: false),
                     DateTime = table.Column<DateTime>(type: "timestamp", nullable: false),
                     UserID = table.Column<int>(type: "INTEGER", nullable: false),
@@ -118,6 +115,13 @@ namespace BookonnectAPI.Migrations
                 name: "IX_Reviews_UserID",
                 table: "Reviews",
                 column: "UserID");
+
+            // Add AUTO_INCREMENT. MySQL specific
+            migrationBuilder.Sql(@"
+                ALTER TABLE OwnedDetails MODIFY ID INT AUTO_INCREMENT PRIMARY KEY;
+                ALTER TABLE AffiliateDetails MODIFY ID INT AUTO_INCREMENT PRIMARY KEY;
+                ALTER TABLE Reviews MODIFY ID INT AUTO_INCREMENT PRIMARY KEY;
+                ");
 
             // Script to update OwnedDetails with existing data
             migrationBuilder.Sql(@"
