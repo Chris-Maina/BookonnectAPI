@@ -32,36 +32,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Accounts");
-                });
-
-            modelBuilder.Entity("BookonnectAPI.Models.AffiliateDetails", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BookID")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Link")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("VARCHAR(20)");
-
-                    b.Property<string>("SourceID")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("BookID")
-                        .IsUnique();
-
-                    b.ToTable("AffiliateDetails");
+                    b.ToTable("Accounts", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Book", b =>
@@ -94,12 +65,17 @@ namespace BookonnectAPI.Migrations
                         .IsRequired()
                         .HasColumnType("VARCHAR(50)");
 
+                    b.Property<int>("VendorID")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("Visible")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("ID");
 
-                    b.ToTable("Books");
+                    b.HasIndex("VendorID");
+
+                    b.ToTable("Books", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.CartItem", b =>
@@ -123,7 +99,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("CartItems");
+                    b.ToTable("CartItems", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Confirmation", b =>
@@ -150,7 +126,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Confirmations");
+                    b.ToTable("Confirmations", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Image", b =>
@@ -178,7 +154,7 @@ namespace BookonnectAPI.Migrations
                     b.HasIndex("BookID")
                         .IsUnique();
 
-                    b.ToTable("Images");
+                    b.ToTable("Images", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.InventoryLog", b =>
@@ -207,7 +183,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("BookID");
 
-                    b.ToTable("InventoryLogs");
+                    b.ToTable("InventoryLogs", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Order", b =>
@@ -236,7 +212,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("CustomerID");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.OrderItem", b =>
@@ -260,29 +236,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("OrderID");
 
-                    b.ToTable("OrderItems");
-                });
-
-            modelBuilder.Entity("BookonnectAPI.Models.OwnedDetails", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BookID")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("VendorID")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("BookID")
-                        .IsUnique();
-
-                    b.HasIndex("VendorID");
-
-                    b.ToTable("OwnedDetails");
+                    b.ToTable("OrderItems", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Payment", b =>
@@ -316,37 +270,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasIndex("ToID");
 
-                    b.ToTable("Payments");
-                });
-
-            modelBuilder.Entity("BookonnectAPI.Models.Review", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BookID")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("DateTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("UserID")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("BookID");
-
-                    b.HasIndex("UserID");
-
-                    b.ToTable("Reviews");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.User", b =>
@@ -374,7 +298,7 @@ namespace BookonnectAPI.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
 
                     b.HasData(
                         new
@@ -387,15 +311,15 @@ namespace BookonnectAPI.Migrations
                         });
                 });
 
-            modelBuilder.Entity("BookonnectAPI.Models.AffiliateDetails", b =>
+            modelBuilder.Entity("BookonnectAPI.Models.Book", b =>
                 {
-                    b.HasOne("BookonnectAPI.Models.Book", "Book")
-                        .WithOne("AffiliateDetails")
-                        .HasForeignKey("BookonnectAPI.Models.AffiliateDetails", "BookID")
+                    b.HasOne("BookonnectAPI.Models.User", "Vendor")
+                        .WithMany("Books")
+                        .HasForeignKey("VendorID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Book");
+                    b.Navigation("Vendor");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.CartItem", b =>
@@ -488,25 +412,6 @@ namespace BookonnectAPI.Migrations
                     b.Navigation("Order");
                 });
 
-            modelBuilder.Entity("BookonnectAPI.Models.OwnedDetails", b =>
-                {
-                    b.HasOne("BookonnectAPI.Models.Book", "Book")
-                        .WithOne("OwnedDetails")
-                        .HasForeignKey("BookonnectAPI.Models.OwnedDetails", "BookID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BookonnectAPI.Models.User", "Vendor")
-                        .WithMany("Books")
-                        .HasForeignKey("VendorID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Book");
-
-                    b.Navigation("Vendor");
-                });
-
             modelBuilder.Entity("BookonnectAPI.Models.Payment", b =>
                 {
                     b.HasOne("BookonnectAPI.Models.User", "From")
@@ -534,32 +439,9 @@ namespace BookonnectAPI.Migrations
                     b.Navigation("To");
                 });
 
-            modelBuilder.Entity("BookonnectAPI.Models.Review", b =>
-                {
-                    b.HasOne("BookonnectAPI.Models.Book", "Book")
-                        .WithMany()
-                        .HasForeignKey("BookID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BookonnectAPI.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Book");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("BookonnectAPI.Models.Book", b =>
                 {
-                    b.Navigation("AffiliateDetails");
-
                     b.Navigation("Image");
-
-                    b.Navigation("OwnedDetails");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Order", b =>
