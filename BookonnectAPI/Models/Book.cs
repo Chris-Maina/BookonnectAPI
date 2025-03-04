@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 
 namespace BookonnectAPI.Models;
 
@@ -28,11 +27,13 @@ public class Book
     public BookCondition Condition { get; set; } = BookCondition.Good;
     public int Quantity { get; set; } = 1;
 
-    public int VendorID { get; set; } // Required foreign key property. Indicates the owner/vendor of the book
-    [JsonIgnore]
-    public User Vendor { get; set; } = null!; // Required reference navigation. A book cannot exist without an owner
-
-    public Image? Image { get; set; } // Optional reference navigation. A book exist without an image.
+    /**
+     * A book can exist without an image. Optional reference navigation
+     * Using composition where Book "has-a" OwnedDetails or AffiliateDetails
+     */
+    public Image? Image { get; set; }
+    public OwnedDetails? OwnedDetails { get; set; }
+    public AffiliateDetails? AffiliateDetails { get; set; }
 
     public static BookDTO BookToDTO(Book book) =>
         new BookDTO
@@ -43,11 +44,14 @@ public class Book
             ISBN = book.ISBN,
             Price = book.Price,
             Description = book.Description,
-            VendorID = book.VendorID,
-            Vendor = User.UserToDTO(book.Vendor),
             Visible = book.Visible,
             Image = book.Image != null ? Image.ImageToDTO(book.Image) : null,
             Condition = book.Condition,
             Quantity = book.Quantity,
+            VendorID = book.OwnedDetails?.ID,
+            Vendor = book.OwnedDetails != null ? User.UserToDTO(book.OwnedDetails.Vendor) : null,
+            AffiliateLink = book.AffiliateDetails?.Link,
+            AffiliateSource = book.AffiliateDetails?.Source,
+            AffiliateSourceID = book.AffiliateDetails?.SourceID
         };
 }

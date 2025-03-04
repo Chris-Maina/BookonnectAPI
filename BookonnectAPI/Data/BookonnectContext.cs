@@ -24,6 +24,9 @@ public class BookonnectContext: DbContext
 	public DbSet<CartItem> CartItems { get; set; }
     public DbSet<Confirmation> Confirmations { get; set; }
     public DbSet<InventoryLog> InventoryLogs { get; set; }
+    public DbSet<OwnedDetails> OwnedDetails { get; set; }
+    public DbSet<AffiliateDetails> AffiliateDetails { get; set; }
+    public DbSet<Review> Reviews { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
