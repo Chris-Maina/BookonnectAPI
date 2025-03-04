@@ -187,16 +187,16 @@ public class PaymentsController : ControllerBase
         var orderItem = await _context.OrderItems
             .Where(ordItem => ordItem.ID == paymentDTO.OrderItemID)
             .Include(ordItem => ordItem.Book)
-            .ThenInclude(bk => bk != null ? bk.Vendor :null)
+            .ThenInclude(bk => bk != null && bk.OwnedDetails != null ? bk.OwnedDetails.Vendor :null)
             .FirstOrDefaultAsync();
 
-        if (orderItem == null || orderItem.Book == null)
+        if (orderItem == null || orderItem.Book == null || orderItem.Book.OwnedDetails == null)
         {
             _logger.LogWarning("Order item not found");
             return NotFound(new { Message = "Order item not found. Try again later." });
         }
 
-        if (PaymentExists(null, orderItem.OrderID, orderItem.Book.VendorID, bookonnectAdmin.ID, paymentDTO.Amount))
+        if (PaymentExists(null, orderItem.OrderID, orderItem.Book.OwnedDetails.VendorID, bookonnectAdmin.ID, paymentDTO.Amount))
         {
             return Conflict(new { Message = "Payment already made to book owner " });
         }
@@ -205,7 +205,7 @@ public class PaymentsController : ControllerBase
         {
             ID = paymentDTO.ID,
             FromID = bookonnectAdmin.ID,
-            ToID = orderItem.Book.VendorID,
+            ToID = orderItem.Book.OwnedDetails.VendorID,
             Amount = paymentDTO.Amount,
             DateTime = DateTime.Now,
             OrderID = orderItem.OrderID,

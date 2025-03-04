@@ -62,7 +62,8 @@ namespace BookonnectAPI.Controllers
                 .ThenInclude(orderItem => orderItem.Confirmations)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                .ThenInclude(bk => bk != null ? bk.Vendor : null)
+                .ThenInclude(bk => bk != null ? bk.OwnedDetails : null)
+                .ThenInclude(od => od != null ? od.Vendor : null)
                 .Select(ord => Order.OrderToDTO(ord))
                 .ToArrayAsync();
 
@@ -86,7 +87,8 @@ namespace BookonnectAPI.Controllers
                 .ThenInclude(book => book != null ? book.Image : null)
                 .Include(ord => ord.OrderItems)
                 .ThenInclude(orderItem => orderItem.Book)
-                .ThenInclude(book => book != null ? book.Vendor : null)
+                .ThenInclude(bk => bk != null ? bk.OwnedDetails : null)
+                .ThenInclude(od => od != null ? od.Vendor : null)
                 .FirstOrDefaultAsync();
 
             if (order == null)
@@ -214,12 +216,14 @@ namespace BookonnectAPI.Controllers
                 {
                     var book = await _context.Books
                         .Where(bk => bk.ID == orderItem.BookID)
-                        .Include(bk => bk.Vendor)
+                        .Include(bk => bk.OwnedDetails)
+                        .ThenInclude(od => od != null ? od.Vendor : null)
                         .FirstOrDefaultAsync();
-                    if (book != null)
+
+                    if (book != null && book?.OwnedDetails != null && book?.OwnedDetails?.Vendor != null)
                     {
                         // Send Dispatch message to vendor
-                        SendOrderDispatchEmail(book.Vendor, order);
+                        SendOrderDispatchEmail(book.OwnedDetails.Vendor, order);
                     }
                 }
                 return Ok(Order.OrderToDTO(order));

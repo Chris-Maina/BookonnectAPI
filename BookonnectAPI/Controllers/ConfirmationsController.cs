@@ -47,7 +47,8 @@ public class ConfirmationsController: ControllerBase
         var orderItem = await _context.OrderItems
               .Where(orderItem => orderItem.ID == confirmationDTO.OrderItemID)
               .Include(orderItem => orderItem.Book)
-              .ThenInclude(bk => bk != null ? bk.Vendor : null)
+              .ThenInclude(bk => bk != null ? bk.OwnedDetails : null)
+              .ThenInclude(od => od != null ? od.Vendor : null)
               .Include(orderItem => orderItem.Order)
               .ThenInclude(ord => ord != null ? ord.Customer : null)
               .FirstOrDefaultAsync();
@@ -183,13 +184,13 @@ public class ConfirmationsController: ControllerBase
                 SendDispatchEmail(orderItem.Order.Customer, orderItem.Book);
                 break;
             case ConfirmationType.Received:
-                if (orderItem.Book?.Vendor == null)
+                if (orderItem.Book == null || orderItem.Book.OwnedDetails == null || orderItem.Book.OwnedDetails.Vendor == null)
                 {
                     _logger.LogWarning("Book vendor not found");
                     break;
                 }
                 // Send vendor receipt email by customer
-                SendReceiptEmail(orderItem.Book.Vendor, orderItem.Book);
+                SendReceiptEmail(orderItem.Book.OwnedDetails.Vendor, orderItem.Book);
                 // Send payment request to admin
                 float amount = (float)(orderItem.Quantity * orderItem.Book.Price);
                 SendBookVendorPaymentRequest(orderItem.ID, orderItem.Book, amount);
@@ -250,9 +251,9 @@ public class ConfirmationsController: ControllerBase
                         <body>
                             <p>Send payment for {book.Title} to vendor with details</p>
                             <ul>
-                               <li>Phone number: <b>{book.Vendor.Phone}</b></li>
+                               <li>Phone number: <b>{book.OwnedDetails?.Vendor.Phone}</b></li>
                                <li>Amount: <b>{amount}</b></li>
-                               <li>Name: <b>{book.Vendor.Name}</b></li>
+                               <li>Name: <b>{book.OwnedDetails?.Vendor.Name}</b></li>
                             </ul>
 
                             <p>Warm regards,</p>

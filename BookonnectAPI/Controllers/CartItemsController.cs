@@ -43,7 +43,8 @@ namespace BookonnectAPI.Controllers
                 .Include(c => c.Book)
                 .ThenInclude(b => b != null ? b.Image : null)
                 .Include(c => c.Book)
-                .ThenInclude(b => b != null ? b.Vendor : null)
+                .ThenInclude(b => b != null ? b.OwnedDetails : null)
+                .ThenInclude(od => od != null ? od.Vendor : null)
                 .Select(c => CartItem.CartItemToDTO(c))
                 .ToArrayAsync();
 
@@ -201,7 +202,8 @@ namespace BookonnectAPI.Controllers
             }
 
             bool myBookExistsInCart = _context.Books.Any(book =>
-                book.VendorID == int.Parse(userId) &&
+                book.OwnedDetails != null &&
+                book.OwnedDetails.VendorID == int.Parse(userId) &&
                 book.ID == cartItemDTO.BookID);
 
             if (myBookExistsInCart)

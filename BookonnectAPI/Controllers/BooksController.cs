@@ -37,13 +37,9 @@ public class BooksController: ControllerBase
             return Unauthorized(new { Message = "Please sign in again." });
         }
 
+
         // Book is a duplicate if uploaded by the same person
-        bool bookExists = _context.Books.Any(bk => (
-            bk.ISBN == bookDTO.ISBN &&
-            bk.Title == bookDTO.Title &&
-            bk.Author == bookDTO.Author &&
-            bk.VendorID == int.Parse(userId)
-        ));
+        bool bookExists = await IsDuplicateBook(bookDTO, int.Parse(userId));
         if (bookExists)
         {
             return Conflict(new { Message = "Book already exists. Update it instead." });
@@ -60,10 +56,27 @@ public class BooksController: ControllerBase
                     ISBN = bookDTO.ISBN,
                     Price = bookDTO.Price,
                     Description = bookDTO.Description,
-                    VendorID = int.Parse(userId),
                     Condition = bookDTO.Condition,
                     Quantity = bookDTO.Quantity,
+                    Visible = bookDTO.Visible
                 };
+                // If an upload is not an affiliate then it's for local users
+                if (bookDTO.AffiliateLink != null && bookDTO.AffiliateSource != null && bookDTO.AffiliateSourceID != null)
+                {
+                    book.AffiliateDetails = new AffiliateDetails
+                    {
+                        Source = bookDTO.AffiliateSource,
+                        Link = bookDTO.AffiliateLink,
+                        SourceID = bookDTO.AffiliateSourceID
+                    };
+                }
+                else
+                {
+                    book.OwnedDetails = new OwnedDetails
+                    {
+                        VendorID = int.Parse(userId)
+                    };
+                }
                 _context.Books.Add(book);
                 await _context.SaveChangesAsync();
 
@@ -80,8 +93,9 @@ public class BooksController: ControllerBase
                 // Commit transaction if all operations succeed
                 await transaction.CommitAsync();
 
-                // Explicitly loading Vendor reference navigation
-                await _context.Entry(book).Reference(bk => bk.Vendor).LoadAsync();
+                // Explicitly load reference navigation
+                await _context.Entry(book).Reference(bk => bk.OwnedDetails).LoadAsync();
+                await _context.Entry(book).Reference(bk => bk.AffiliateDetails).LoadAsync();
                 return CreatedAtAction(nameof(PostBook), new { id = book.ID }, Book.BookToDTO(book));
 
             } catch (Exception ex)
@@ -105,7 +119,9 @@ public class BooksController: ControllerBase
                 .Where(b => b.Visible == true && b.Quantity > 0)
                 .OrderBy(b => b.ID)
                 .Include(b => b.Image)
-                .Include(b => b.Vendor)
+                .Include(b => b.AffiliateDetails)
+                .Include(b => b.OwnedDetails)
+                .ThenInclude(od => od != null ? od.Vendor : null)
                 .Select(b => Book.BookToDTO(b))
                 .Skip(queryParameter.Size * (queryParameter.Page - 1))
                 .Take(queryParameter.Size)
@@ -129,9 +145,10 @@ public class BooksController: ControllerBase
         }
 
         var books = await _context.Books
-                .Where(b => b.VendorID == int.Parse(userId))
+                .Where(b => b.OwnedDetails != null && b.OwnedDetails.VendorID == int.Parse(userId))
                 .Include(b => b.Image)
-                .Include(b => b.Vendor)
+                .Include(b => b.OwnedDetails)
+                .ThenInclude(od =>  od != null ? od.Vendor : null)
                 .Select(b => Book.BookToDTO(b))
                 .ToArrayAsync();
 
@@ -147,7 +164,9 @@ public class BooksController: ControllerBase
         var book = await _context.Books
             .Where(b => b.ID == id)
             .Include(b => b.Image)
-            .Include(b => b.Vendor)
+            .Include(b => b.AffiliateDetails)
+            .Include(b => b.OwnedDetails)
+            .ThenInclude(od => od != null ? od.Vendor : null)
             .FirstOrDefaultAsync();
 
         if (book == null)
@@ -258,8 +277,10 @@ public class BooksController: ControllerBase
         // Eager loading references
         var book = await _context.Books
             .Where(b => b.ID == id)
-            .Include(b => b.Vendor)
             .Include(bk => bk.Image)
+            .Include(b => b.AffiliateDetails)
+            .Include(b => b.OwnedDetails)
+            .ThenInclude(od => od != null ? od.Vendor : null)
             .FirstOrDefaultAsync();
 
         if (book == null)
@@ -399,6 +420,30 @@ public class BooksController: ControllerBase
     private bool BookExists(int id)
     {
         return _context.Books.Any(book => book.ID == id);
+    }
+
+    private async Task<bool> IsDuplicateBook(BookDTO bookDTO, int vendorID)
+    {
+        if (await _context.Books.AnyAsync(bk => (
+            bk.ISBN == bookDTO.ISBN &&
+            bk.Title == bookDTO.Title &&
+            bk.Author == bookDTO.Author
+        )))
+        {
+            if (bookDTO.AffiliateLink != null && bookDTO.AffiliateSource != null)
+            {
+                return await _context.AffiliateDetails.AnyAsync(ad => ad.Link == bookDTO.AffiliateLink && ad.Source == bookDTO.AffiliateSource);
+            }
+            else
+            {
+                return await _context.OwnedDetails.AnyAsync(od => od.VendorID == vendorID);
+            }    
+
+        }
+        else
+        {
+            return false; // title, ISBN and author combination is unique, therefore not a duplicate.
+        }
     }
 }
 

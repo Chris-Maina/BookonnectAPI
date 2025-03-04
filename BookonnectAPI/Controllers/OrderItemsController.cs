@@ -53,7 +53,8 @@ public class OrderItemsController : ControllerBase
                 .Include(ordItem => ordItem.Book)
                 .ThenInclude(bk => bk != null ? bk.Image : null)
                 .Include(ordItem => ordItem.Book)
-                .ThenInclude(bk => bk != null ? bk.Vendor : null)
+                .ThenInclude(bk => bk != null ? bk.OwnedDetails : null)
+                .ThenInclude(od => od != null ? od.Vendor : null)
                 .Select(ordItem => OrderItem.OrderItemToDTO(ordItem))
                 .ToArrayAsync();
 
@@ -63,13 +64,14 @@ public class OrderItemsController : ControllerBase
         _logger.LogInformation("Fetching order items for logged in vendor");
         orderItems = await _context.OrderItems
             .OrderBy(ordItem => ordItem.ID)
-            .Where(ordItem => ordItem.Book != null && ordItem.Book.VendorID == int.Parse(userID))
+            .Where(ordItem => ordItem.Book != null && ordItem.Book.OwnedDetails != null && ordItem.Book.OwnedDetails.VendorID == int.Parse(userID))
             .Include(orderItem => orderItem.Order)
             .Include(ordItem => ordItem.Confirmations)
             .Include(ordItem => ordItem.Book)
             .ThenInclude(bk => bk != null ? bk.Image : null)
             .Include(ordItem => ordItem.Book)
-            .ThenInclude(bk => bk != null ? bk.Vendor : null)
+            .ThenInclude(bk => bk != null ? bk.OwnedDetails : null)
+            .ThenInclude(od => od != null ? od.Vendor : null)
             .Select(ordItem => OrderItem.OrderItemToDTO(ordItem))
             .ToArrayAsync();
 
