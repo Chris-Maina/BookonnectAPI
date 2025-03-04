@@ -118,9 +118,9 @@ namespace BookonnectAPI.Migrations
 
             // Add AUTO_INCREMENT. MySQL specific
             migrationBuilder.Sql(@"
-                ALTER TABLE OwnedDetails MODIFY ID INT AUTO_INCREMENT PRIMARY KEY;
-                ALTER TABLE AffiliateDetails MODIFY ID INT AUTO_INCREMENT PRIMARY KEY;
-                ALTER TABLE Reviews MODIFY ID INT AUTO_INCREMENT PRIMARY KEY;
+                ALTER TABLE OwnedDetails MODIFY ID INT AUTO_INCREMENT;
+                ALTER TABLE AffiliateDetails MODIFY ID INT AUTO_INCREMENT;
+                ALTER TABLE Reviews MODIFY ID INT AUTO_INCREMENT;
                 ");
 
             // Script to update OwnedDetails with existing data
