@@ -1,10 +1,12 @@
 ﻿using System.Security.Claims;
+using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BookonnectAPI.Controllers;
 
@@ -16,10 +18,12 @@ public class BooksController: ControllerBase
 {
 	private readonly BookonnectContext _context;
     private readonly ILogger<BooksController> _logger;
-    public BooksController(BookonnectContext context, ILogger<BooksController> logger)
+    private readonly MailSettingsOptions _mailSettings;
+    public BooksController(BookonnectContext context, ILogger<BooksController> logger, IOptions<MailSettingsOptions> mailSettings)
 	{
 		_context = context;
         _logger = logger;
+        _mailSettings = mailSettings.Value;
     }
 
 	[HttpPost]
@@ -144,13 +148,31 @@ public class BooksController: ControllerBase
             return Unauthorized(new { Message = "Please sign in again." });
         }
 
-        var books = await _context.Books
-                .Where(b => b.OwnedDetails != null && b.OwnedDetails.VendorID == int.Parse(userId))
+
+        BookDTO[]? books;
+        var isBookonnectAdmin = await _context.Users.AnyAsync(u => u.ID == int.Parse(userId) && u.Email == _mailSettings.EmailId);
+        if (isBookonnectAdmin)
+        {
+            // include affiliate books
+            books = await _context.Books
+                .Where(b => b.OwnedDetails != null && b.OwnedDetails.VendorID == int.Parse(userId) || b.AffiliateDetails != null)
                 .Include(b => b.Image)
+                .Include(b => b.AffiliateDetails)
                 .Include(b => b.OwnedDetails)
-                .ThenInclude(od =>  od != null ? od.Vendor : null)
+                .ThenInclude(od => od != null ? od.Vendor : null)
                 .Select(b => Book.BookToDTO(b))
                 .ToArrayAsync();
+
+            return Ok(books);
+        }
+
+        books = await _context.Books
+            .Where(b => b.OwnedDetails != null && b.OwnedDetails.VendorID == int.Parse(userId))
+            .Include(b => b.Image)
+            .Include(b => b.OwnedDetails)
+            .ThenInclude(od =>  od != null ? od.Vendor : null)
+            .Select(b => Book.BookToDTO(b))
+            .ToArrayAsync();
 
         return Ok(books);
     }
