@@ -6,7 +6,7 @@ public class BookDTO
     public string Title { get; set; } = String.Empty;
     public string Author { get; set; } = String.Empty;
     public string ISBN { get; set; } = string.Empty;
-    public float Price { get; set; }
+    public float? Price { get; set; }
     public string? Description { get; set; }
     public ImageDTO? Image { get; set; }
     public bool Visible { get; set; }

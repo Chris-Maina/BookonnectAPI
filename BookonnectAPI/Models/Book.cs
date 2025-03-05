@@ -21,7 +21,7 @@ public class Book
     public string Author { get; set; } = String.Empty;
     [Column(TypeName = "VARCHAR(20)")]
     public string ISBN { get; set; } = string.Empty;
-    public float Price { get; set; }
+    public float? Price { get; set; }
     public string? Description { get; set; }
     public bool Visible { get; set; } = true;
     public BookCondition Condition { get; set; } = BookCondition.Good;
