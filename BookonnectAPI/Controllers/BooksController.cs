@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
+using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
@@ -19,11 +20,13 @@ public class BooksController: ControllerBase
 	private readonly BookonnectContext _context;
     private readonly ILogger<BooksController> _logger;
     private readonly MailSettingsOptions _mailSettings;
-    public BooksController(BookonnectContext context, ILogger<BooksController> logger, IOptions<MailSettingsOptions> mailSettings)
+    private readonly IGoogleBooksApiService _googleBooksApiService;
+    public BooksController(BookonnectContext context, ILogger<BooksController> logger, IOptions<MailSettingsOptions> mailSettings, IGoogleBooksApiService googleBooksApiService)
 	{
 		_context = context;
         _logger = logger;
         _mailSettings = mailSettings.Value;
+        _googleBooksApiService = googleBooksApiService;
     }
 
 	[HttpPost]
@@ -175,6 +178,36 @@ public class BooksController: ControllerBase
             .ToArrayAsync();
 
         return Ok(books);
+    }
+
+    [HttpGet("search")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<GoogleBookApiResponse>> SearchBook([FromQuery] SearchQueryParameters queryParameters)
+    {
+        _logger.LogInformation("Searching book");
+
+        if (string.IsNullOrEmpty(queryParameters.SearchTerm))
+        {
+            
+            return Ok(new GoogleBookApiResponse { Items = null });
+        }
+        try
+        {
+        
+        var response = await _googleBooksApiService.SearchBook(queryParameters.SearchTerm);
+        return Ok(response);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(ex.StatusCode != null ? (int)ex.StatusCode : 500, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }   
+
     }
 
     [HttpGet("{id}")]
