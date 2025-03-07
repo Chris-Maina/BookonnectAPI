@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
+using Microsoft.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,11 +95,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Add a named http client
+// Add a named/typed http client
 builder.Services.AddHttpClient("Safaricom", httpClient =>
 {
     httpClient.BaseAddress = new Uri("https://sandbox.safaricom.co.ke");
 });
+builder.Services.AddHttpClient<IGoogleBooksApiService, GoogleBooksApiService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
