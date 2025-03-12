@@ -3,6 +3,7 @@ using System;
 using BookonnectAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookonnectAPI.Migrations
 {
     [DbContext(typeof(BookonnectContext))]
-    partial class BookonnectContextModelSnapshot : ModelSnapshot
+    [Migration("20250310201246_EditTextColumn")]
+    partial class EditTextColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.7");
@@ -191,9 +194,7 @@ namespace BookonnectAPI.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("DateTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("INTEGER");
@@ -329,9 +330,7 @@ namespace BookonnectAPI.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("DateTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
