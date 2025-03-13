@@ -41,6 +41,7 @@
     <None Remove="Lib\" />
     <None Remove="Configuration\" />
     <None Remove="Migrations\" />
+    <None Remove="DTO\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\" />
@@ -49,5 +50,6 @@
     <Folder Include="Lib\" />
     <Folder Include="Configuration\" />
     <Folder Include="Migrations\" />
+    <Folder Include="DTO\" />
   </ItemGroup>
 </Project>
