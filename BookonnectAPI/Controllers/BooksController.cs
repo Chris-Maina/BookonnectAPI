@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
+using BookonnectAPI.DTO;
 using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -184,20 +185,22 @@ public class BooksController: ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<GoogleBookApiResponse>> SearchBook([FromQuery] SearchQueryParameters queryParameters)
+    public async Task<ActionResult<IEnumerable<BookSearchDTO>>> SearchBook([FromQuery] SearchQueryParameters queryParameters)
     {
         _logger.LogInformation("Searching book");
 
         if (string.IsNullOrEmpty(queryParameters.SearchTerm))
         {
             
-            return Ok(new GoogleBookApiResponse { Items = null });
+            return Ok();
         }
         try
         {
         
         var response = await _googleBooksApiService.SearchBook(queryParameters.SearchTerm);
-        return Ok(response);
+        var result = GoogleBooksApiService.ConvertResponseToSearchDTO(response);
+
+        return Ok(result);
         }
         catch (HttpRequestException ex)
         {
