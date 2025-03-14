@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MySql.EntityFrameworkCore.Extensions;
 
 namespace BookonnectAPI.Controllers;
 
@@ -194,13 +195,24 @@ public class BooksController: ControllerBase
             
             return Ok();
         }
+
+        var results = await _context.Books
+            .Where(bk => EF.Functions.Like(bk.Title, $"%{queryParameters.SearchTerm}%") || EF.Functions.Like(bk.Author, $"%{queryParameters.SearchTerm}%"))
+            .Include(bk => bk.Image)
+            .Select(bk => Book.BookToSearchDTO(bk))
+            .ToArrayAsync();
+
+        if (results != null)
+        {
+            return Ok(results);
+        }
+
         try
         {
-        
-        var response = await _googleBooksApiService.SearchBook(queryParameters.SearchTerm);
-        var result = GoogleBooksApiService.ConvertResponseToSearchDTO(response);
+            var response = await _googleBooksApiService.SearchBook(queryParameters.SearchTerm);
+            var result = GoogleBooksApiService.ConvertResponseToSearchDTO(response);
 
-        return Ok(result);
+            return Ok(result);
         }
         catch (HttpRequestException ex)
         {

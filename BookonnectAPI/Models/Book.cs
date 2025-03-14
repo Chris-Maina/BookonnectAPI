@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using BookonnectAPI.DTO;
 
 namespace BookonnectAPI.Models;
 
@@ -54,4 +55,19 @@ public class Book
             AffiliateSource = book.AffiliateDetails?.Source,
             AffiliateSourceID = book.AffiliateDetails?.SourceID
         };
+
+    public static BookSearchDTO BookToSearchDTO(Book book) {
+        
+        return new BookSearchDTO
+        {
+            ID = Guid.NewGuid().ToString("N"),
+            BookId = book.ID,
+            Title = book.Title,
+            Description = book.Description,
+            ISBN = book.ISBN,
+            Authors = new string[] { book.Author },
+            ImageUrl = book?.Image?.Url
+        };
+    }
+
 }
