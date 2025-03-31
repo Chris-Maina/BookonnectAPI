@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Text.Json;
 using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
 using BookonnectAPI.DTO;
@@ -23,12 +24,14 @@ public class BooksController: ControllerBase
     private readonly ILogger<BooksController> _logger;
     private readonly MailSettingsOptions _mailSettings;
     private readonly IGoogleBooksApiService _googleBooksApiService;
-    public BooksController(BookonnectContext context, ILogger<BooksController> logger, IOptions<MailSettingsOptions> mailSettings, IGoogleBooksApiService googleBooksApiService)
+    private readonly IGeminiService _geminiService;
+    public BooksController(BookonnectContext context, ILogger<BooksController> logger, IOptions<MailSettingsOptions> mailSettings, IGoogleBooksApiService googleBooksApiService, IGeminiService geminiService)
 	{
 		_context = context;
         _logger = logger;
         _mailSettings = mailSettings.Value;
         _googleBooksApiService = googleBooksApiService;
+        _geminiService = geminiService;
     }
 
 	[HttpPost]
@@ -218,11 +221,80 @@ public class BooksController: ControllerBase
         {
             return StatusCode(ex.StatusCode != null ? (int)ex.StatusCode : 500, ex.Message);
         }
+        catch (JsonException ex)
+        {
+            _logger.LogError($"An error occurred during JSON processing: {ex.Message}", ex);
+            return StatusCode(500, ex.Message);
+        }
         catch (Exception ex)
         {
             return StatusCode(500, ex.Message);
         }   
 
+    }
+
+    [HttpPost("generate")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GenerateRecommendations()
+    {
+        _logger.LogInformation("Generating book recommendations");
+        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            _logger.LogWarning("User id not found in token");
+            return Unauthorized(new { Message = "Please sign in again." });
+        }
+
+        User? user = await _context.Users.FirstOrDefaultAsync(user => user.ID == int.Parse(userId));
+        if (user == null)
+        {
+            _logger.LogWarning("User not found.");
+            return NotFound(new { Message = "User not found. Sign up." });
+        }
+
+        ReviewDTO[]? reviews = await _context.Reviews
+            .Where(review => review.UserID == user.ID)
+            .Include(review => review.Book)
+            .Select(review => Review.ReviewToDTO(review))
+            .ToArrayAsync();
+
+        if (reviews == null || reviews.Length == 0)
+        {
+            return NotFound(new { Message = "Please submit at least 5 book reviews" });
+        }
+
+        try
+        {
+            var prompt = _geminiService.GetRecommendationsPrompt(user.Email, reviews);
+            GeminiApiResponse? response = await _geminiService.GenerateContent(prompt);
+
+            if (
+                response == null ||
+                response?.Candidates == null ||
+                response?.Candidates?.Length == 0 ||
+                response?.Candidates?[0].Content == null ||
+                response?.Candidates?[0].Content?.Parts?.Length == 0)
+            {
+                return NotFound(new { Message = "Sorry, could not get your recommendations" });
+            }
+            return Ok(response?.Candidates?[0].Content?.Parts?[0].Text);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(ex.StatusCode != null ? (int)ex.StatusCode : 500, ex.Message);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError($"An error occurred during JSON processing: {ex.Message}", ex);
+            return StatusCode(500, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"An unexpected error occurred: {ex.Message}", ex);
+            return StatusCode(500, ex.Message);
+        }
     }
 
     [HttpGet("{id}")]
