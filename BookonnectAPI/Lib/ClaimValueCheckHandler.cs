@@ -20,7 +20,7 @@ public class ClaimValueCheckHandler : AuthorizationHandler<ClaimRequirement>
             return Task.CompletedTask;
         }
 
-
+        // get claim value i.e. user id 
         var claimValue = context.User.FindFirstValue(requirement.ClaimType);
         using (var scope = _serviceProvider.CreateScope())
         {
