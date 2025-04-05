@@ -11,13 +11,13 @@ namespace BookonnectAPI.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            //migrationBuilder.DropForeignKey(
-            //    name: "FK_Recommendation_Books_BookID",
-            //    table: "Recommendation");
+            migrationBuilder.DropForeignKey(
+                name: "FK_Recommendation_Books_BookID",
+                table: "Recommendation");
 
-            //migrationBuilder.DropForeignKey(
-            //    name: "FK_Recommendation_Users_UserID",
-            //    table: "Recommendation");
+            migrationBuilder.DropForeignKey(
+                name: "FK_Recommendation_Users_UserID",
+                table: "Recommendation");
 
             /**
              * MSQL version limitation in Production affects the order of rename operation and renaming primary key.
@@ -34,9 +34,9 @@ namespace BookonnectAPI.Migrations
             //    name: "PK_Recommendation",
             //    table: "Recommendation");
 
-            //migrationBuilder.RenameTable(
-            //    name: "Recommendation",
-            //    newName: "Recommendations");
+            migrationBuilder.RenameTable(
+                name: "Recommendation",
+                newName: "Recommendations");
 
             // Using Sql() in Production due to lack of privileges instead of DropPrimaryKey
             migrationBuilder.Sql("ALTER TABLE `Recommendations` DROP PRIMARY KEY, ADD PRIMARY KEY (`ID`);");
