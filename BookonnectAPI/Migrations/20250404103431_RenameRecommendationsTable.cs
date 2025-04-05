@@ -19,8 +19,17 @@ namespace BookonnectAPI.Migrations
                 name: "FK_Recommendation_Users_UserID",
                 table: "Recommendation");
 
-            // Using Sql() in Production due to lack of privileges instead of DropPrimaryKey
-            migrationBuilder.Sql("ALTER TABLE `Recommendation` DROP PRIMARY KEY;");
+            /**
+             * MSQL version limitation in Production affects the order of rename operation and renaming primary key.
+             * The limitation arises when a table exists without any primary key after a DROP PRIMARY KEY statement. 
+             * By performing the RENAME TABLE before the DROP PRIMARY KEY, the table briefly exists under the new name with the old primary key. 
+             * Then, we immediately drop and add the new primary key to the table with its new name.
+             * 
+             * Therefore steps include
+             * 1. Rename table comes first
+             * 2. Droping old primary key in new table name i.e. ALTER TABLE `Recommendations` DROP PRIMARY KEY;
+             * 3. Add PK in new table name i.e. ALTER TABLE `Recommendations` ADD PRIMARY KEY (`ID`);
+             */
             //migrationBuilder.DropPrimaryKey(
             //    name: "PK_Recommendation",
             //    table: "Recommendation");
@@ -28,6 +37,9 @@ namespace BookonnectAPI.Migrations
             migrationBuilder.RenameTable(
                 name: "Recommendation",
                 newName: "Recommendations");
+
+            // Using Sql() in Production due to lack of privileges instead of DropPrimaryKey
+            migrationBuilder.Sql("ALTER TABLE `Recommendations` DROP PRIMARY KEY;");
 
             migrationBuilder.RenameIndex(
                 name: "IX_Recommendation_UserID",
@@ -39,7 +51,6 @@ namespace BookonnectAPI.Migrations
                 table: "Recommendations",
                 newName: "IX_Recommendations_BookID");
 
-            // Using Sql() in Production due to lack of privileges instead of AddPrimaryKey
             migrationBuilder.Sql("ALTER TABLE `Recommendations` ADD PRIMARY KEY (`ID`);");
             //migrationBuilder.AddPrimaryKey(
             //    name: "PK_Recommendations",
