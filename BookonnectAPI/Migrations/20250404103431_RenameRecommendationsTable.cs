@@ -19,9 +19,11 @@ namespace BookonnectAPI.Migrations
                 name: "FK_Recommendation_Users_UserID",
                 table: "Recommendation");
 
-            migrationBuilder.DropPrimaryKey(
-                name: "PK_Recommendation",
-                table: "Recommendation");
+            // Using Sql() in Production due to lack of privileges instead of DropPrimaryKey
+            migrationBuilder.Sql("ALTER TABLE `Recommendation` DROP PRIMARY KEY;");
+            //migrationBuilder.DropPrimaryKey(
+            //    name: "PK_Recommendation",
+            //    table: "Recommendation");
 
             migrationBuilder.RenameTable(
                 name: "Recommendation",
@@ -37,13 +39,14 @@ namespace BookonnectAPI.Migrations
                 table: "Recommendations",
                 newName: "IX_Recommendations_BookID");
 
+            // Using Sql() in Production due to lack of privileges instead of AddPrimaryKey
+            migrationBuilder.Sql("ALTER TABLE `Recommendations` ADD PRIMARY KEY (`ID`);");
+            //migrationBuilder.AddPrimaryKey(
+            //    name: "PK_Recommendations",
+            //    table: "Recommendations",
+            //    column: "ID");
 
-            migrationBuilder.AddPrimaryKey(
-                name: "PK_Recommendations",
-                table: "Recommendations",
-                column: "ID");
-
-            migrationBuilder.AddForeignKey(
+        migrationBuilder.AddForeignKey(
                 name: "FK_Recommendations_Books_BookID",
                 table: "Recommendations",
                 column: "BookID",
@@ -71,9 +74,10 @@ namespace BookonnectAPI.Migrations
                 name: "FK_Recommendations_Users_UserID",
                 table: "Recommendations");
 
-            migrationBuilder.DropPrimaryKey(
-                name: "PK_Recommendations",
-                table: "Recommendations");
+            migrationBuilder.Sql("ALTER TABLE `Recommendations` DROP PRIMARY KEY;");
+            //migrationBuilder.DropPrimaryKey(
+            //    name: "PK_Recommendations",
+            //    table: "Recommendations");
 
             migrationBuilder.RenameTable(
                 name: "Recommendations",
@@ -89,10 +93,11 @@ namespace BookonnectAPI.Migrations
                 table: "Recommendation",
                 newName: "IX_Recommendation_BookID");
 
-            migrationBuilder.AddPrimaryKey(
-                name: "PK_Recommendation",
-                table: "Recommendation",
-                column: "ID");
+            migrationBuilder.Sql("ALTER TABLE `Recommendation` ADD PRIMARY KEY (`ID`);");
+            //migrationBuilder.AddPrimaryKey(
+            //    name: "PK_Recommendation",
+            //    table: "Recommendation",
+            //    column: "ID");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Recommendation_Books_BookID",
