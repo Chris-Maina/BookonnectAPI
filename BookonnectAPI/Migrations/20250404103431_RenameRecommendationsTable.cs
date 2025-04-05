@@ -34,9 +34,9 @@ namespace BookonnectAPI.Migrations
             //    name: "PK_Recommendation",
             //    table: "Recommendation");
 
-            migrationBuilder.RenameTable(
-                name: "Recommendation",
-                newName: "Recommendations");
+            //migrationBuilder.RenameTable(
+            //    name: "Recommendation",
+            //    newName: "Recommendations");
 
             // Using Sql() in Production due to lack of privileges instead of DropPrimaryKey
             migrationBuilder.Sql("ALTER TABLE `Recommendations` DROP PRIMARY KEY, ADD PRIMARY KEY (`ID`);");
