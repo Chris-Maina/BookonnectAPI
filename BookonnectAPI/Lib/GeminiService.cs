@@ -1,4 +1,5 @@
 ﻿using BookonnectAPI.Configuration;
+using BookonnectAPI.DTO;
 using BookonnectAPI.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
@@ -79,12 +80,12 @@ public class GeminiService: IGeminiService
                 PropertyNameCaseInsensitive = true
             };
 
-            return await JsonSerializer.DeserializeAsync<GeminiApiResponse>(responseStream, options); ;
+            return await JsonSerializer.DeserializeAsync<GeminiApiResponse>(responseStream, options);
         }
         // throw error returned in httpResponseMessage
         return null;
     }
-    public string GetRecommendationsPrompt(string email, IEnumerable<ReviewDTO> reviews)
+    public string GetRecommendationsPrompt(string email, IEnumerable<Review> reviews)
     {
         List<string> likes = new List<string>();
         List<string> disLikes = new List<string>();
@@ -104,6 +105,26 @@ public class GeminiService: IGeminiService
         string disLikesString = string.Join(", ", disLikes);
 
         return $@"Give 4 book recommendations to {email}.They like {likesString} and dislike {disLikesString}.Include id, title, ISBN, author and description information in the response.Strictly adhere to the JSON schema.";
+    }
+
+    public BookSearchDTO[]? DeserializeGeminiResponse(GeminiApiResponse? response)
+    {
+        if (
+               response == null ||
+               response.Candidates == null ||
+               response.Candidates?.Length == 0 ||
+               response.Candidates?[0].Content == null ||
+               response.Candidates[0].Content?.Parts == null ||
+               response.Candidates[0].Content?.Parts?.Length == 0 ||
+               response.Candidates[0].Content?.Parts?[0].Text == null)
+        {
+            return null;
+        }
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        return JsonSerializer.Deserialize<BookSearchDTO[]>(response.Candidates[0].Content?.Parts?[0].Text!, options);
     }
 }
 
