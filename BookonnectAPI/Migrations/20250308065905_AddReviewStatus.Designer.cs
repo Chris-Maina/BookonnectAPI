@@ -3,6 +3,7 @@ using System;
 using BookonnectAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookonnectAPI.Migrations
 {
     [DbContext(typeof(BookonnectContext))]
-    partial class BookonnectContextModelSnapshot : ModelSnapshot
+    [Migration("20250308065905_AddReviewStatus")]
+    partial class AddReviewStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.7");
@@ -191,9 +194,7 @@ namespace BookonnectAPI.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("DateTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("INTEGER");
@@ -319,27 +320,6 @@ namespace BookonnectAPI.Migrations
                     b.ToTable("Payments");
                 });
 
-            modelBuilder.Entity("BookonnectAPI.Models.Recommendation", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BookID")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("UserID")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("BookID");
-
-                    b.HasIndex("UserID");
-
-                    b.ToTable("Recommendations");
-                });
-
             modelBuilder.Entity("BookonnectAPI.Models.Review", b =>
                 {
                     b.Property<int>("ID")
@@ -350,14 +330,13 @@ namespace BookonnectAPI.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("DateTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Text")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("UserID")
@@ -555,25 +534,6 @@ namespace BookonnectAPI.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("To");
-                });
-
-            modelBuilder.Entity("BookonnectAPI.Models.Recommendation", b =>
-                {
-                    b.HasOne("BookonnectAPI.Models.Book", "Book")
-                        .WithMany()
-                        .HasForeignKey("BookID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BookonnectAPI.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Book");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BookonnectAPI.Models.Review", b =>

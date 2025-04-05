@@ -1,12 +1,16 @@
 ﻿using System.Security.Claims;
+using System.Text.Json;
 using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
+using BookonnectAPI.DTO;
+using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MySql.EntityFrameworkCore.Extensions;
 
 namespace BookonnectAPI.Controllers;
 
@@ -19,11 +23,15 @@ public class BooksController: ControllerBase
 	private readonly BookonnectContext _context;
     private readonly ILogger<BooksController> _logger;
     private readonly MailSettingsOptions _mailSettings;
-    public BooksController(BookonnectContext context, ILogger<BooksController> logger, IOptions<MailSettingsOptions> mailSettings)
+    private readonly IGoogleBooksApiService _googleBooksApiService;
+    private readonly IGeminiService _geminiService;
+    public BooksController(BookonnectContext context, ILogger<BooksController> logger, IOptions<MailSettingsOptions> mailSettings, IGoogleBooksApiService googleBooksApiService, IGeminiService geminiService)
 	{
 		_context = context;
         _logger = logger;
         _mailSettings = mailSettings.Value;
+        _googleBooksApiService = googleBooksApiService;
+        _geminiService = geminiService;
     }
 
 	[HttpPost]
@@ -175,6 +183,54 @@ public class BooksController: ControllerBase
             .ToArrayAsync();
 
         return Ok(books);
+    }
+
+    [HttpGet("search")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<BookSearchDTO>>> SearchBook([FromQuery] SearchQueryParameters queryParameters)
+    {
+        _logger.LogInformation("Searching book");
+
+        if (string.IsNullOrEmpty(queryParameters.SearchTerm))
+        {
+            
+            return Ok();
+        }
+
+        var results = await _context.Books
+            .Where(bk => EF.Functions.Like(bk.Title, $"%{queryParameters.SearchTerm}%") || EF.Functions.Like(bk.Author, $"%{queryParameters.SearchTerm}%"))
+            .Include(bk => bk.Image)
+            .Select(bk => Book.BookToSearchDTO(bk))
+            .ToArrayAsync();
+
+        if (results != null)
+        {
+            return Ok(results);
+        }
+
+        try
+        {
+            var response = await _googleBooksApiService.SearchBook(queryParameters.SearchTerm);
+            var result = GoogleBooksApiService.ConvertResponseToSearchDTO(response);
+
+            return Ok(result);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(ex.StatusCode != null ? (int)ex.StatusCode : 500, ex.Message);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError($"An error occurred during JSON processing: {ex.Message}", ex);
+            return StatusCode(500, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }   
+
     }
 
     [HttpGet("{id}")]
