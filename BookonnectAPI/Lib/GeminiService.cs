@@ -2,9 +2,6 @@
 using BookonnectAPI.DTO;
 using BookonnectAPI.Models;
 using Microsoft.Extensions.Options;
-using Microsoft.Net.Http.Headers;
-using System.IO;
-using System.Text;
 using System.Text.Json;
 
 namespace BookonnectAPI.Lib;
@@ -31,7 +28,7 @@ public class GeminiService: IGeminiService
             {
                 Parts = new[]
                 {
-                    new { Text = "You are a book recommendations assistant or agent.The user will provide their email and books they like and dislike.Respond with books the user they would enjoy reading."}
+                    new { Text = "You are a book recommendations assistant or agent.The user will provide their email and books they like and dislike.Respond with books the user they would enjoy reading.Consider responding with one of either print, audio or ebook. Share the full book blurb as description."}
                 }
             },
             contents = new[]
@@ -104,7 +101,7 @@ public class GeminiService: IGeminiService
         string likesString = string.Join(", ", likes);
         string disLikesString = string.Join(", ", disLikes);
 
-        return $@"Give 4 book recommendations to {email}.They like {likesString} and dislike {disLikesString}.Include id, title, ISBN, author and description information in the response.Strictly adhere to the JSON schema.";
+        return $@"Give 4 book recommendations to {email}. Consider responding with one of either print, audio or ebook. They like {likesString} and dislike {disLikesString}.Include id, title, ISBN, author and description information in the response. Strictly adhere to the JSON schema.";
     }
 
     public BookSearchDTO[]? DeserializeGeminiResponse(GeminiApiResponse? response)
