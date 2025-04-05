@@ -1,4 +1,4 @@
-﻿using BookonnectAPI.Configuration;
+using BookonnectAPI.Configuration;
 using BookonnectAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -27,6 +27,7 @@ public class BookonnectContext: DbContext
     public DbSet<OwnedDetails> OwnedDetails { get; set; }
     public DbSet<AffiliateDetails> AffiliateDetails { get; set; }
     public DbSet<Review> Reviews { get; set; }
+    public DbSet<Recommendation> Recommendations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
