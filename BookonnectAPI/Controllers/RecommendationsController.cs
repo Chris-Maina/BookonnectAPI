@@ -107,14 +107,14 @@ public class RecommendationsController : ControllerBase
             if (reviews == null || reviews.Length == 0)
             {
                 _logger.LogInformation("User does not have reviews");
-                return NotFound(new { Message = "Please submit at least 5 book reviews" });
+                return NotFound(new { Message = "Please add at least 5 book preferences" });
             }
 
             var review = reviews.FirstOrDefault(review => review.User?.Email != null);
             if (review == null)
             {
                 _logger.LogError("Reviews are not associated to a user");
-                return NotFound(new { Message = "Could not get your recommendations. Update your reviews." });
+                return NotFound(new { Message = "Could not get your recommendations. Update your preferences." });
             }
 
             var prompt = _geminiService.GetRecommendationsPrompt(review.User?.Email!, reviews);
@@ -124,7 +124,7 @@ public class RecommendationsController : ControllerBase
             if (booksInResponse == null)
             {
                 _logger.LogInformation("Deserialization returned a null value");
-                return NotFound(new { Message = "Could not get your recommendations. Update your reviews." });
+                return NotFound(new { Message = "Could not get your recommendations. Update your preferences." });
             }
 
             _logger.LogInformation("Saving LLM response to DB");
