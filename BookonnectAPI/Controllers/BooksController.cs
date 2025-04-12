@@ -199,20 +199,21 @@ public class BooksController: ControllerBase
             return Ok();
         }
 
-        var results = await _context.Books
-            .Where(bk => EF.Functions.Like(bk.Title, $"%{queryParameters.SearchTerm}%") || EF.Functions.Like(bk.Author, $"%{queryParameters.SearchTerm}%"))
-            .Include(bk => bk.Image)
-            .Select(bk => Book.BookToSearchDTO(bk))
-            .ToArrayAsync();
-
-        if (results != null)
-        {
-            _logger.LogInformation("Found book in our DB");
-            return Ok(results);
-        }
-
         try
         {
+            var results = await _context.Books
+                .Where(bk => EF.Functions.Like(bk.Title, $"%{queryParameters.SearchTerm}%") || EF.Functions.Like(bk.Author, $"%{queryParameters.SearchTerm}%"))
+                .Include(bk => bk.Image)
+                .Select(bk => Book.BookToSearchDTO(bk))
+                .ToArrayAsync();
+
+            if (results != null)
+            {
+                _logger.LogInformation("Found book in our DB");
+                return Ok(results);
+            }
+
+        
             var response = await _googleBooksApiService.SearchBook(queryParameters.SearchTerm);
             _logger.LogInformation("Found book from Google Books API");
             var result = GoogleBooksApiService.ConvertResponseToSearchDTO(response);
@@ -228,6 +229,12 @@ public class BooksController: ControllerBase
         {
             _logger.LogError($"A JsonException occurred: {ex.Message}", ex);
             return StatusCode(500, ex.Message);
+        }
+        catch (ArgumentNullException ex)
+        {
+            _logger.LogError($"A ArgumentNullException occurred: {ex.Message}", ex);
+            return StatusCode(500, ex.Message);
+
         }
         catch (Exception ex)
         {
