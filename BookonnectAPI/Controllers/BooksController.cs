@@ -25,13 +25,15 @@ public class BooksController: ControllerBase
     private readonly MailSettingsOptions _mailSettings;
     private readonly IGoogleBooksApiService _googleBooksApiService;
     private readonly IGeminiService _geminiService;
-    public BooksController(BookonnectContext context, ILogger<BooksController> logger, IOptions<MailSettingsOptions> mailSettings, IGoogleBooksApiService googleBooksApiService, IGeminiService geminiService)
+    private readonly IWebHostEnvironment _environment;
+    public BooksController(IWebHostEnvironment environment, BookonnectContext context, ILogger<BooksController> logger, IOptions<MailSettingsOptions> mailSettings, IGoogleBooksApiService googleBooksApiService, IGeminiService geminiService)
 	{
 		_context = context;
         _logger = logger;
         _mailSettings = mailSettings.Value;
         _googleBooksApiService = googleBooksApiService;
         _geminiService = geminiService;
+        _environment = environment;
     }
 
 	[HttpPost]
@@ -201,13 +203,23 @@ public class BooksController: ControllerBase
 
         try
         {
+
+            /*
+             * To improve searching we are using:
+             * - AsNoTracking() to improve performance by disabling change tracking since we are only reading data
+             * - EF.Functions.Collate to perform case insensitive search
+             */
+            var searchTermLower = queryParameters.SearchTerm.ToLower();
+            var caseInsensitiveCollationSetting = _environment.IsDevelopment() ? "NOCASE" : "utf8mb3_general_ci";
             var results = await _context.Books
-                .Where(bk => EF.Functions.Like(bk.Title, $"%{queryParameters.SearchTerm}%") || EF.Functions.Like(bk.Author, $"%{queryParameters.SearchTerm}%"))
+                .AsNoTracking()
+                .Where(bk => EF.Functions.Like(EF.Functions.Collate(bk.Title, caseInsensitiveCollationSetting), $"%{searchTermLower}%") ||
+                     EF.Functions.Like(EF.Functions.Collate(bk.Author, caseInsensitiveCollationSetting), $"%{searchTermLower}%"))
                 .Include(bk => bk.Image)
                 .Select(bk => Book.BookToSearchDTO(bk))
                 .ToArrayAsync();
 
-            if (results != null)
+            if (results.Length >= 0)
             {
                 _logger.LogInformation("Found book in our DB");
                 return Ok(results);
