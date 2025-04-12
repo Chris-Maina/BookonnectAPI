@@ -207,27 +207,31 @@ public class BooksController: ControllerBase
 
         if (results != null)
         {
+            _logger.LogInformation("Found book in our DB");
             return Ok(results);
         }
 
         try
         {
             var response = await _googleBooksApiService.SearchBook(queryParameters.SearchTerm);
+            _logger.LogInformation("Found book from Google Books API");
             var result = GoogleBooksApiService.ConvertResponseToSearchDTO(response);
 
             return Ok(result);
         }
         catch (HttpRequestException ex)
         {
+            _logger.LogError($"A HttpRequestException occurred: {ex.Message}", ex);
             return StatusCode(ex.StatusCode != null ? (int)ex.StatusCode : 500, ex.Message);
         }
         catch (JsonException ex)
         {
-            _logger.LogError($"An error occurred during JSON processing: {ex.Message}", ex);
+            _logger.LogError($"A JsonException occurred: {ex.Message}", ex);
             return StatusCode(500, ex.Message);
         }
         catch (Exception ex)
         {
+            _logger.LogError($"An Exception occurred: {ex.Message}", ex);
             return StatusCode(500, ex.Message);
         }   
 
