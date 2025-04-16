@@ -219,7 +219,7 @@ public class BooksController: ControllerBase
                 .Select(bk => Book.BookToSearchDTO(bk))
                 .ToArrayAsync();
 
-            if (results.Length >= 0)
+            if (results.Length > 0)
             {
                 _logger.LogInformation("Found book in our DB");
                 Console.WriteLine($"Results {results}");
