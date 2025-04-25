@@ -84,7 +84,8 @@ public class BooksController: ControllerBase
                         SourceID = bookDTO.AffiliateSourceID
                     };
                 }
-                else
+
+                if (bookDTO.isVendor)
                 {
                     book.OwnedDetails = new OwnedDetails
                     {

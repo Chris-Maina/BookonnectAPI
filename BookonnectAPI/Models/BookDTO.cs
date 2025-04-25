@@ -12,6 +12,7 @@ public class BookDTO
     public bool Visible { get; set; }
     public BookCondition Condition { get; set; }
     public int Quantity { get; set; }
+    public bool isVendor { get; set; } = false;
     public int? VendorID { get; set; }
     public UserDTO? Vendor { get; set; }
     public string? AffiliateLink { get; set; } = string.Empty;
