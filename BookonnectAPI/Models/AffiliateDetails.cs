@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.ComponentModel.DataAnnotations.Schema;
+using BookonnectAPI.DTO;
 
 namespace BookonnectAPI.Models;
 
@@ -16,6 +17,16 @@ public class AffiliateDetails
      */
     public int BookID { get; set; }
     public Book Book { get; set; } = null!;
+
+    public static AffiliateDetailsDTO AffiliateDetailsToDTO(AffiliateDetails affiliateDetails) => new AffiliateDetailsDTO
+    {
+        ID = affiliateDetails.ID,
+        Link = affiliateDetails.Link,
+        SourceID = affiliateDetails.SourceID,
+        Source = affiliateDetails.Source,
+        BookID = affiliateDetails.BookID,
+        Book = Book.BookToDTO(affiliateDetails.Book),
+    };
                     
 }
 
