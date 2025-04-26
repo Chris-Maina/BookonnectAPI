@@ -107,7 +107,7 @@ public class RecommendationsController : ControllerBase
             if (reviews == null || reviews.Length == 0)
             {
                 _logger.LogInformation("User does not have reviews");
-                return NotFound(new { Message = "Please add at least 5 book preferences" });
+                return NotFound(new { Message = "Please add at least 3 book preferences" });
             }
 
             var review = reviews.FirstOrDefault(review => review.User?.Email != null);
