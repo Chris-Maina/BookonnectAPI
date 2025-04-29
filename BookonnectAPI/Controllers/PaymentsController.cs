@@ -42,44 +42,40 @@ public class PaymentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<ActionResult<PaymentDTO>> PostPayment(PaymentDTO paymentDTO)
     {
-        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
-        {
-            _logger.LogWarning("User id not found in token");
-            return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        var order = await _context.Orders.FindAsync(paymentDTO.OrderID);
-        if (order == null)
-        {
-            _logger.LogInformation("Order with id {0} not found", paymentDTO.OrderID);
-            return NotFound(new { Message = "Order not found. Try again." });
-        }
-
-        if (PaymentExists(paymentDTO.ID, paymentDTO.OrderID, null, null, order.Total))
-        {
-            _logger.LogInformation("Found an existing payment with the ID {0}", paymentDTO.ID);
-            return Conflict(new { Message = "Payment already exists" });
-        }
-
-        var bookonnectAdmin = _context.Users.Where(u => u.Email == _mailSettings.EmailId).FirstOrDefault();
-        if (bookonnectAdmin == null)
-        {
-            return NotFound(new { Message = "Could not find some payment details.Try again later" });
-        }
-        var payment = new Payment
-        {
-            ID = paymentDTO.ID,
-            FromID = int.Parse(userId),
-            ToID = bookonnectAdmin.ID,
-            Amount = order.Total,
-            DateTime = DateTime.Now,
-            OrderID = paymentDTO.OrderID
-        };
-        _context.Payments.Add(payment);
 
         try
         {
+            var order = await _context.Orders.FindAsync(paymentDTO.OrderID);
+            if (order == null)
+            {
+                _logger.LogInformation("Order with id {0} not found", paymentDTO.OrderID);
+                return NotFound(new { Message = "Order not found. Try again." });
+            }
+
+            bool paymentExists = await PaymentExists(paymentDTO.ID, paymentDTO.OrderID, null, null, order.Total);
+            if (paymentExists)
+            {
+                _logger.LogInformation("Found an existing payment with the ID {0}", paymentDTO.ID);
+                return Conflict(new { Message = "Payment already exists" });
+            }
+
+            var bookonnectAdmin = await _context.Users.Where(u => u.Email == _mailSettings.EmailId).FirstOrDefaultAsync();
+            if (bookonnectAdmin == null)
+            {
+                return NotFound(new { Message = "Could not find some payment details.Try again later" });
+            }
+
+            int.TryParse(this.User.FindFirstValue(ClaimTypes.NameIdentifier), out int userId);
+            var payment = new Payment
+            {
+                ID = paymentDTO.ID,
+                FromID = userId,
+                ToID = bookonnectAdmin.ID,
+                Amount = order.Total,
+                DateTime = DateTime.Now, // Should reflect mpesa payment date, payment.DTO???
+                OrderID = paymentDTO.OrderID
+            };
+            _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
             // Send BookAdmin notification to verify payment. List MPESA ref & amount and/or timestamp
             SendPaymentVerificationRequest(payment);
@@ -99,49 +95,46 @@ public class PaymentsController : ControllerBase
     public async Task<ActionResult> PatchPayment(string id, [FromBody] JsonPatchDocument<Payment> patchDoc)
     {
         _logger.LogInformation("Updating payment");
-        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
-        {
-            _logger.LogWarning("There is no user id in token");
-            return Unauthorized(new { Message = "Please sign in" });
-        }
-
-        var bookonnectAdmin = _context.Users.Where(u => u.ID == int.Parse(userId) && u.Email == _mailSettings.EmailId).FirstOrDefault();
-        if (bookonnectAdmin == null)
-        {
-            return NotFound(new { Message = "Functionality only availabile for Admin user " });
-        }
-
-        if (patchDoc == null)
-        {
-            return BadRequest(ModelState);
-        }
-
-        var payment = await _context.Payments.FindAsync(id);
-        if (payment == null)
-        {
-            _logger.LogWarning("Payment not found");
-            return NotFound(new { Message = "Payment not found" });
-        }
-
-        patchDoc.ApplyTo(payment, ModelState);
-
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        _context.Update(payment);
-
         try
         {
+            int.TryParse(this.User.FindFirstValue(ClaimTypes.NameIdentifier), out int userId);
+
+            var bookonnectAdmin = await _context.Users.Where(u => u.ID == userId && u.Email == _mailSettings.EmailId).FirstOrDefaultAsync();
+            if (bookonnectAdmin == null)
+            {
+                return NotFound(new { Message = "Functionality only availabile for Admin user " });
+            }
+
+            if (patchDoc == null)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var payment = await _context.Payments.FindAsync(id);
+            if (payment == null)
+            {
+                _logger.LogWarning("Payment not found");
+                return NotFound(new { Message = "Payment not found" });
+            }
+
+            patchDoc.ApplyTo(payment, ModelState);
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            _context.Update(payment);
+
+        
             await _context.SaveChangesAsync();
             return Ok(payment);
         }
         catch (DbUpdateConcurrencyException ex)
         {
             _logger.LogError(ex, "Error saving payment to DB");
-            if (!PaymentExists(id, null, null, null, null))
+            bool paymentExists = await PaymentExists(id, null, null, null, null);
+            if (!paymentExists)
             {
                 return NotFound(new { Message = "Payment not found" });
             }
@@ -171,51 +164,50 @@ public class PaymentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult> PayBookOwner(PaymentOwnerBody paymentDTO)
     {
-        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
-        {
-            _logger.LogWarning("User id not found in token");
-            return Unauthorized(new { Message = "Please sign in again." });
-        }
-
-        var bookonnectAdmin = _context.Users.Where(u => u.ID == int.Parse(userId) && u.Email == _mailSettings.EmailId).FirstOrDefault();
-        if (bookonnectAdmin == null)
-        {
-            return NotFound(new { Message = "Functionality only availabile for Admin user " });
-        }
-
-        var orderItem = await _context.OrderItems
-            .Where(ordItem => ordItem.ID == paymentDTO.OrderItemID)
-            .Include(ordItem => ordItem.Book)
-            .ThenInclude(bk => bk != null && bk.OwnedDetails != null ? bk.OwnedDetails.Vendor :null)
-            .FirstOrDefaultAsync();
-
-        if (orderItem == null || orderItem.Book == null || orderItem.Book.OwnedDetails == null)
-        {
-            _logger.LogWarning("Order item not found");
-            return NotFound(new { Message = "Order item not found. Try again later." });
-        }
-
-        if (PaymentExists(null, orderItem.OrderID, orderItem.Book.OwnedDetails.VendorID, bookonnectAdmin.ID, paymentDTO.Amount))
-        {
-            return Conflict(new { Message = "Payment already made to book owner " });
-        }
-
-        var payment = new Payment
-        {
-            ID = paymentDTO.ID,
-            FromID = bookonnectAdmin.ID,
-            ToID = orderItem.Book.OwnedDetails.VendorID,
-            Amount = paymentDTO.Amount,
-            DateTime = DateTime.Now,
-            OrderID = orderItem.OrderID,
-            Status = PaymentStatus.Verified,
-        };
-
-        _context.Payments.Add(payment);
-
         try
         {
+            int.TryParse(this.User.FindFirstValue(ClaimTypes.NameIdentifier), out int userId);
+
+            var bookonnectAdmin = await _context.Users
+                .Where(u => u.ID == userId && u.Email == _mailSettings.EmailId)
+                .FirstOrDefaultAsync();
+            if (bookonnectAdmin == null)
+            {
+                return NotFound(new { Message = "Functionality only availabile for Admin user " });
+            }
+
+            var orderItem = await _context.OrderItems
+                .Where(ordItem => ordItem.ID == paymentDTO.OrderItemID)
+                .Include(ordItem => ordItem.Book)
+                .ThenInclude(bk => bk != null && bk.OwnedDetails != null ? bk.OwnedDetails.Vendor :null)
+                .FirstOrDefaultAsync();
+
+            if (orderItem == null || orderItem.Book == null || orderItem.Book.OwnedDetails == null)
+            {
+                _logger.LogWarning("Order item not found");
+                return NotFound(new { Message = "Order item not found. Try again later." });
+            }
+
+            var paymentExists = await PaymentExists(null, orderItem.OrderID, orderItem.Book.OwnedDetails.VendorID, bookonnectAdmin.ID, paymentDTO.Amount);
+            if (paymentExists)
+            {
+                return Conflict(new { Message = "Payment already made to book owner " });
+            }
+
+            var payment = new Payment
+            {
+                ID = paymentDTO.ID,
+                FromID = bookonnectAdmin.ID,
+                ToID = orderItem.Book.OwnedDetails.VendorID,
+                Amount = paymentDTO.Amount,
+                DateTime = DateTime.Now, // Should reflect mpesa payment date, payment.DTO???
+                OrderID = orderItem.OrderID,
+                Status = PaymentStatus.Verified,
+            };
+
+            _context.Payments.Add(payment);
+
+        
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(PostPayment), new { id = payment.ID }, Payment.PaymentToDTO(payment));
         }
@@ -234,25 +226,29 @@ public class PaymentsController : ControllerBase
     public async Task<ActionResult> GetPayments()
     {
         _logger.LogInformation("Getting payments");
-        var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
+        try
         {
-            _logger.LogWarning("User id not found in token");
-            return Unauthorized(new { Message = "Please sign in again." });
-        }
+            int.TryParse(this.User.FindFirstValue(ClaimTypes.NameIdentifier), out int userId);
 
-        var bookonnectAdmin = _context.Users.Where(u => u.ID == int.Parse(userId) && u.Email == _mailSettings.EmailId).FirstOrDefault();
-        if (bookonnectAdmin == null)
+            var bookonnectAdmin = await _context.Users
+                .Where(u => u.ID == userId && u.Email == _mailSettings.EmailId)
+                .FirstOrDefaultAsync();
+            if (bookonnectAdmin == null)
+            {
+                return NotFound(new { Message = "Functionality only availabile for Admin user " });
+            }
+
+            var payments = await _context.Payments
+                   .OrderBy(p => p.ID)
+                   .Select(p => Payment.PaymentToDTO(p))
+                   .ToArrayAsync();
+
+            return Ok(payments);
+        } catch (Exception ex)
         {
-            return NotFound(new { Message = "Functionality only availabile for Admin user " });
+            _logger.LogError(ex, "Error saving payment in DB");
+            return StatusCode(500, ex.Message);
         }
-
-        var payments = await _context.Payments
-               .OrderBy(p => p.ID)
-               .Select(p => Payment.PaymentToDTO(p))
-               .ToArrayAsync();
-
-        return Ok(payments);
     }
 
     private void SendPaymentVerificationRequest(Payment payment)
@@ -280,22 +276,22 @@ public class PaymentsController : ControllerBase
         _mailLibrary.SendMail(emailData);
     }
 
-    private bool PaymentExists(string? id, int? orderID, int? toUserID, int? fromUserID, float? amount) 
+    private async Task<bool> PaymentExists(string? id, int? orderID, int? toUserID, int? fromUserID, float? amount) 
     {
         if (id != null && orderID != null)
         {
-            return _context.Payments.Any(p => p.ID == id && p.OrderID == orderID);
+            return await _context.Payments.AnyAsync(p => p.ID == id && p.OrderID == orderID);
         }
 
         if (id != null)
         {
-            return _context.Payments.Any(p => p.ID == id);
+            return await _context.Payments.AnyAsync(p => p.ID == id);
         }
 
         if (orderID != null && toUserID != null && fromUserID != null && amount != null)
         {
 
-            return _context.Payments.Any(p => p.OrderID == orderID && p.ToID == toUserID && p.FromID == fromUserID && p.Amount == amount);
+            return await _context.Payments.AnyAsync(p => p.OrderID == orderID && p.ToID == toUserID && p.FromID == fromUserID && p.Amount == amount);
         }
 
         return false;
