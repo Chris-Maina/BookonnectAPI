@@ -16,7 +16,7 @@ public class AffiliateDetails
      * AffiliateDetails must be associated with a Book
      */
     public int BookID { get; set; }
-    public Book Book { get; set; } = null!;
+    public Book? Book { get; set; }
 
     public static AffiliateDetailsDTO AffiliateDetailsToDTO(AffiliateDetails affiliateDetails) => new AffiliateDetailsDTO
     {
@@ -25,7 +25,7 @@ public class AffiliateDetails
         SourceID = affiliateDetails.SourceID,
         Source = affiliateDetails.Source,
         BookID = affiliateDetails.BookID,
-        Book = Book.BookToDTO(affiliateDetails.Book),
+        Book = affiliateDetails.Book != null ? Book.BookToDTO(affiliateDetails.Book) : null,
     };
                     
 }
