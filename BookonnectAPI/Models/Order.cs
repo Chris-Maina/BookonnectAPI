@@ -10,11 +10,12 @@ public class Order
     [Column(TypeName = "VARCHAR(50)")]
     public string DeliveryLocation { get; set; } = String.Empty;
     public string? DeliveryInstructions { get; set; }
-    public DateTime DateTime { get; set; }  
+    public DateTime DateTime { get; set; }
 
     /**
-     * Order can have multiple OrderItems i.e. Optional collection navigation.
-     * Order can have a multiple payments (dependant) i.e Optional collection navigation
+     * Order can have multiple OrderItems.
+     * Order can have a multiple payments.
+     * Thus both OrderItems and Payments are optional collection navigations.
      * Adding JsonIgnore attribute on OrderItems to avoid cycles
     */
     [JsonIgnore]
@@ -23,7 +24,7 @@ public class Order
 
 
     /**
-     * Required foreign key properties and reference navigations 
+     * Required foreign key properties and reference navigations
      * An order must be associated with a customer/user
      * 
      */

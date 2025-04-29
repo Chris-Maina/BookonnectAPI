@@ -32,42 +32,45 @@ namespace BookonnectAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrders([FromQuery] OrderQueryParameters orderQueryParameters)
         {
-            _logger.LogInformation("Getting orders");
-            var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null)
+            try
             {
-                _logger.LogWarning("No token found");
-                return Unauthorized(new { Message = "Please sign in again." });
-            }
-           
-            OrderDTO[] orders;
-            if (orderQueryParameters.Total != null && orderQueryParameters.BookID != null)
-            {
-                _logger.LogInformation("Fetching orders by logged in user and query params Total and BookID");
-                var bookIDSet = new HashSet<int>(orderQueryParameters.BookID);
+                int.TryParse(this.User.FindFirstValue(ClaimTypes.NameIdentifier), out int userId);
+                OrderDTO[] orders;
+                if (orderQueryParameters.Total != null && orderQueryParameters.BookID != null)
+                {
+                    _logger.LogInformation($"Getting orders of loggedin user with Total:{orderQueryParameters.Total} and BookID: {orderQueryParameters.BookID}");
+                    var bookIDSet = new HashSet<int>(orderQueryParameters.BookID);
+                    orders = await _context.Orders
+                        .Where(ord => ord.CustomerID == userId)
+                        .Where(ord => ord.Total == orderQueryParameters.Total)
+                        .Where(ord => ord.OrderItems.Where(ordItem => bookIDSet.Contains(ordItem.BookID)).Count() == orderQueryParameters.BookID.Count())
+                        .Select(ord => Order.OrderToDTO(ord))
+                        .ToArrayAsync();
+
+                    return Ok(orders);
+                }
+                _logger.LogInformation("Getting orders of loggedin user");
                 orders = await _context.Orders
-                    .Where(ord => ord.CustomerID == int.Parse(userId))
-                    .Where(ord => ord.Total == orderQueryParameters.Total)
-                    .Where(ord => ord.OrderItems.Where(ordItem => bookIDSet.Contains(ordItem.BookID)).Count() == orderQueryParameters.BookID.Count())
+                    .Where(ord => ord.CustomerID == userId)
+                    .Include(ord => ord.Payments)
+                    .Include(ord => ord.OrderItems)
+                    .ThenInclude(orderItem => orderItem.Confirmations)
+                    .Include(ord => ord.OrderItems)
+                    .ThenInclude(orderItem => orderItem.Book)
+                    .ThenInclude(bk => bk != null ? bk.OwnedDetails : null)
+                    .ThenInclude(od => od != null ? od.Vendor : null)
                     .Select(ord => Order.OrderToDTO(ord))
                     .ToArrayAsync();
 
                 return Ok(orders);
-            }
-            _logger.LogInformation("Fetching orders by logged in user");
-            orders = await _context.Orders
-                .Where(ord => ord.CustomerID == int.Parse(userId))
-                .Include(ord => ord.Payments)
-                .Include(ord => ord.OrderItems)
-                .ThenInclude(orderItem => orderItem.Confirmations)
-                .Include(ord => ord.OrderItems)
-                .ThenInclude(orderItem => orderItem.Book)
-                .ThenInclude(bk => bk != null ? bk.OwnedDetails : null)
-                .ThenInclude(od => od != null ? od.Vendor : null)
-                .Select(ord => Order.OrderToDTO(ord))
-                .ToArrayAsync();
 
-            return Ok(orders);
+            } catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
+                return StatusCode(500, ex.Message);
+            }
+           
+            
         }
 
         // GET api/<OrdersController>/5
@@ -109,53 +112,46 @@ namespace BookonnectAPI.Controllers
         public async Task<ActionResult<OrderDTO>> Post([FromBody] OrderDTO orderDTO)
         {
             _logger.LogInformation("Creating order");
-            var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null)
-            {
-                _logger.LogWarning("There is no user id in token");
-                return Unauthorized(new { Message = "Please sign in again." });
-            }
-
-            /**
-             * Project bookIDs from orderDTO.OrderItems using Select
-             * Project orderItems from context and intersect with the above bookIDs. Instersect makes use of HashSet<T>
-             * so instead of O(n^2) for the check, we have O(n)
-             */
-            var orderItemDTOBookIDs = orderDTO.OrderItems.Select(orderItemDTO => orderItemDTO.BookID);
-            var orderItemDTOBookIDSet = new HashSet<int>(orderItemDTOBookIDs);
-            bool orderExists = _context.Orders.Any(ord =>
-                ord.Total == orderDTO.Total &&
-                ord.CustomerID == int.Parse(userId) &&
-                ord.OrderItems.Where(orderItem => orderItemDTOBookIDSet.Contains(orderItem.BookID)).Any());
-
-            if (orderExists)
-            {
-                _logger.LogWarning("Order exists");
-                return Conflict(new { Message = "Order already exists" });
-            }
-
-            var order = new Order
-            {
-                CustomerID = int.Parse(userId),
-                Total = orderDTO.Total,
-                DateTime = DateTime.Now,
-                OrderItems = orderDTO.OrderItems
-                   .Select(orderItemDTO =>
-                       new OrderItem
-                       {
-                           Quantity = orderItemDTO.Quantity,
-                           BookID = orderItemDTO.BookID
-                       })
-                   .ToList(),
-            };
-
-            _context.Orders.Add(order);
-
             try
             {
+                int.TryParse(this.User.FindFirstValue(ClaimTypes.NameIdentifier), out int userId);
+                /**
+                 * Project bookIDs from orderDTO.OrderItems using Select
+                 * Project orderItems from context and intersect with the above bookIDs. Instersect makes use of HashSet<T>
+                 * so instead of O(n^2) for the check, we have O(n)
+                 */
+                var orderItemDTOBookIDs = orderDTO.OrderItems.Select(orderItemDTO => orderItemDTO.BookID);
+                var orderItemDTOBookIDSet = new HashSet<int>(orderItemDTOBookIDs);
+                bool orderExists = await _context.Orders.AnyAsync(ord =>
+                    ord.Total == orderDTO.Total &&
+                    ord.CustomerID == userId &&
+                    ord.OrderItems.Where(orderItem => orderItemDTOBookIDSet.Contains(orderItem.BookID)).Any());
+
+                if (orderExists)
+                {
+                    _logger.LogWarning("Order exists");
+                    return Conflict(new { Message = "Order already exists" });
+                }
+
+                var order = new Order
+                {
+                    CustomerID = userId,
+                    Total = orderDTO.Total,
+                    DateTime = DateTime.Now,
+                    OrderItems = orderDTO.OrderItems
+                       .Select(orderItemDTO =>
+                           new OrderItem
+                           {
+                               Quantity = orderItemDTO.Quantity,
+                               BookID = orderItemDTO.BookID
+                           })
+                       .ToList(),
+                };
+
+                _context.Orders.Add(order);
                 _logger.LogInformation("Saving order to database");
                 await _context.SaveChangesAsync();
-                var customer = await _context.Users.FindAsync(int.Parse(userId));
+                var customer = await _context.Users.FindAsync(userId);
                 if (customer != null)
                 {
                     // Send Order Confirmation message to customer
@@ -172,10 +168,10 @@ namespace BookonnectAPI.Controllers
         }
 
         // PUT api/<OrdersController>/5
-        [HttpPut("{id}")]
-        public void PutOrder(int id, [FromBody] string value)
-        {
-        }
+        //[HttpPut("{id}")]
+        //public void PutOrder(int id, [FromBody] string value)
+        //{
+        //}
 
         // PATCH api/<OrdersController>/5
         [HttpPatch("{id}")]
@@ -190,26 +186,26 @@ namespace BookonnectAPI.Controllers
             {
                 return BadRequest(ModelState);
             }
-
-            var order = await _context.Orders
-                .Where(ord => ord.ID == id)
-                .Include(ord => ord.Customer)
-                .Include(ord => ord.Payments)
-                .FirstOrDefaultAsync();
-            if (order == null)
-            {
-                return NotFound(new { Message = "Order not found" });
-            }
-
-            patchDoc.ApplyTo(order, ModelState);
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            _context.Update(order);
             try
             {
+                var order = await _context.Orders
+                    .Where(ord => ord.ID == id)
+                    .Include(ord => ord.Customer)
+                    .Include(ord => ord.Payments)
+                    .FirstOrDefaultAsync();
+
+                if (order == null)
+                {
+                    return NotFound(new { Message = "Order not found" });
+                }
+
+                patchDoc.ApplyTo(order, ModelState);
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                _context.Update(order);
                 await _context.SaveChangesAsync();
 
                 foreach (OrderItem orderItem in order.OrderItems)
@@ -271,6 +267,7 @@ namespace BookonnectAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error deleting order");
                 return StatusCode(500, ex.Message);
             }
         }
