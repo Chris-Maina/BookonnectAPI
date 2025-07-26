@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
-using Microsoft.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,7 +38,6 @@ builder.Services.AddControllers(options =>
 });
 
 builder.Services.AddScoped<ITokenLibrary, TokenLibrary>();
-builder.Services.AddScoped<IMpesaLibrary, MpesaLibrary>();
 builder.Services.AddScoped<IMailLibrary, MailLibrary>();
 
 // Connect to DB
