@@ -102,6 +102,7 @@ builder.Services.AddHttpClient("Safaricom", httpClient =>
 });
 builder.Services.AddHttpClient<IGoogleBooksApiService, GoogleBooksApiService>();
 builder.Services.AddHttpClient<IGeminiService, GeminiService>();
+builder.Services.AddHttpClient<IChromaService, ChromaService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
