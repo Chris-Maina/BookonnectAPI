@@ -131,52 +131,34 @@ public class GeminiService : IGeminiService
     try
     {
       _logger.LogInformation("Requesting embedding for book: {Title}", bookTitle);
-      var payload = new
+      var payload = new GeminiApiEmbeddingRequest
       {
-        content = new[]
+        Content = new GeminiApiContent
         {
-          new
+          Parts = new[]
           {
-            text = $"Generate a dense vector embedding that captures the core themes, plot elements, and overall tone of the following book description. Focus on aspects that would help identify similar books for a reader: Title:{bookTitle} Author:{bookAuthor} Genre:{bookGenre} Synopsis:{bookDescription}"
-          }
-        },
-        model = "gemini-embedding-001",
-        generationConfig = new
-        {
-          responseMimeType = "application/json",
-          responseSchema = new
-          {
-            type = "ARRAY",
-            items = new
+            new GeminiApiPart
             {
-              type = "FLOAT",
-              format = "float32"
+              Text = $"Generate a dense vector embedding that captures the core themes, plot elements, and overall tone of the following book description. Focus on aspects that would help identify similar books for a reader: Title:{bookTitle} Author:{bookAuthor} Genre:{bookGenre} Synopsis:{bookDescription}"
             }
           }
-        }
+        },
       };
 
-      JsonContent content = JsonContent.Create(payload);
-      var httpResponseMessage = await _httpClient.PostAsync($"/v1beta/models/gemini-embedding-001:embed?key={_googleOptions.GeminiApiKey}", content);
+      var jsonPayload = JsonSerializer.Serialize(payload);
+      var content = new StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
+      var httpResponseMessage = await _httpClient.PostAsync($"/v1beta/models/gemini-embedding-001:embedContent?key={_googleOptions.GeminiApiKey}", content);
       if (!httpResponseMessage.IsSuccessStatusCode)
       {
         _logger.LogError("Failed to get embedding for book: {Title}. Status code: {StatusCode}", bookTitle, httpResponseMessage.StatusCode);
         return Array.Empty<float>();
       }
 
-      var responseStream = await httpResponseMessage.Content.ReadAsStreamAsync();
-      var result = await JsonSerializer.DeserializeAsync<GeminiEmbeddingResponse>(responseStream);
+      var jsonResponse = await httpResponseMessage.Content.ReadAsStringAsync();
+      var result = JsonSerializer.Deserialize<GeminiApiEmbeddingResponse>(jsonResponse);
 
-      if (result?.Embeddings == null || result.Embeddings.Length == 0)
-      {
-        _logger.LogError("No embeddings found for book: {Title}", bookTitle);
-        return null;
-      }
-
-      var embedding = result.Embeddings[0];
       _logger.LogInformation("Successfully retrieved embedding for book: {Title}", bookTitle);
-      
-      return embedding.ToArray();
+      return result?.Embeddings?.ToArray();
     }
     catch (Exception ex)
     {
