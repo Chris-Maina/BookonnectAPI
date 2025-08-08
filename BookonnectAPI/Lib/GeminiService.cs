@@ -25,37 +25,36 @@ public class GeminiService : IGeminiService
   public async Task<GeminiApiResponse?> GenerateContent(string prompt)
   {
     _logger.LogInformation("Sending generate content request to Gemini LLM");
-    var payload = new
+    var payload = new GeminiApiRequest
     {
-      systemInstruction = new
+      SystemInstruction = new GeminiApiContent
       {
         Parts = new[]
-            {
-                    new { Text = "You are a book recommendations assistant or agent.The user will provide their email and books they like and dislike.Respond with books the user they would enjoy reading.Consider responding with one of either print, audio or ebook. Share the full book blurb as description."}
-                }
+        {
+          new GeminiApiPart { Text = "You are a book recommendations assistant or agent.The user will provide their email and books they like and dislike.Respond with books the user they would enjoy reading.Consider responding with one of either print, audio or ebook. Share the full book blurb as description."}
+        }
       },
-      contents = new[]
-        {
-               new
-               {
-                    role = "user",
-                    Parts = new[]
-                    {
-                        new { Text = prompt },
-                    },
-               }
-            },
-      generationConfig = new
+      Contents = new[]
       {
-        temperature = 1.0,
-        response_mime_type = "application/json",
-        response_schema = new
+        new GeminiApiContent
         {
-          type = "ARRAY",
-          items = new
+          Parts = new[]
           {
-            type = "OBJECT",
-            properties = new
+            new GeminiApiPart { Text = prompt }
+          }
+        }
+      },
+      GenerationConfig = new GeminiApiGenerationConfig
+      {
+        Temperature = 1.0,
+        ResponseMimeType = "application/json",
+        ResponseSchema = new GeminiApiResponseSchema
+        {
+          Type = "ARRAY",
+          Items = new GeminiApiResponseSchemaItem
+          {
+            Type = "OBJECT",
+            Properties = new
             {
               // Use BookSearchDTO properties. Rename to ExternalBookDTO
               id = new { type = "STRING" },
@@ -64,10 +63,10 @@ public class GeminiService : IGeminiService
               description = new { type = "STRING" },
               authors = new { type = "ARRAY", items = new { type = "STRING" } },
             },
-            propertyOrdering = new[] { "id", "title", "isbn", "authors", "description" }
+            PropertyOrdering = new[] { "id", "title", "isbn", "authors", "description" }
           }
         }
-      }
+      },
     };
 
     JsonContent content = JsonContent.Create(payload);
