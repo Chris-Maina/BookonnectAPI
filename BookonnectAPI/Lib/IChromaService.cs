@@ -7,7 +7,7 @@ namespace BookonnectAPI.Lib;
 public interface IChromaService
 {
   public Task InitializeAsync();
-  public Task<List<string>> QuerySimilarBooksAsync(float[] userProfileVectorEmbedding, int limit = 5, List<int>? excludeBookIds = null);
+  public Task<List<int>> QuerySimilarBooksAsync(float[] userProfileVectorEmbedding, int limit = 5, List<int>? excludeBookIds = null);
   public Task<float[]?> GetBookEmbeddingByIdAsync(int bookId);
   public Task<List<float[]?>> GetBookEmbeddingsAsync(List<int> bookIds);
   public Task UpsertBookEmbeddingAsync(int bookId, float[] embedding, Dictionary<string, object>? metadata = null);

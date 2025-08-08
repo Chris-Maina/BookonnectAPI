@@ -110,7 +110,7 @@ public class ChromaService : IChromaService
     }
   }
 
-  public async Task<List<string>> QuerySimilarBooksAsync(float[] userProfileVectorEmbedding, int limit = 5, List<int>? excludeBookIds = null)
+  public async Task<List<int>> QuerySimilarBooksAsync(float[] userProfileVectorEmbedding, int limit = 5, List<int>? excludeBookIds = null)
   {
     try
     {
@@ -134,7 +134,7 @@ public class ChromaService : IChromaService
       var queryResult = await _booksCollectionClient!.Query(queryEmbeddings, nResults: limit, where: filter);
 
       // Extract IDs from the query result
-      var similarBookIds = queryResult.Select(result => result.Id).ToList();
+      var similarBookIds = queryResult.Select(result => int.Parse(result.Id)).ToList();
       _logger.LogInformation("Queried similar books for user profile vector embedding: {Embedding}, found {Count} results", string.Join(", ", userProfileVectorEmbedding), similarBookIds.Count);
 
       return similarBookIds;
