@@ -70,7 +70,7 @@ public class ChromaService : IChromaService
       };
       var metadatas = new List<Dictionary<string, object>> { metadata ?? defaultMetadata };
 
-      // Chroma's Add method handles upserts if ID already exists
+      // Chroma's Add method ignores and ID if it already exists
       await _booksCollectionClient!.Add(ids, embeddings, metadatas);
       _logger.LogInformation("Upserted embedding for book ID: {BookId}", bookId);
     }
