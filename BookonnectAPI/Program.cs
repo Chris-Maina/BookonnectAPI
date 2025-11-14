@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
+using BookonnectCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +37,9 @@ builder.Services.AddControllers(options =>
 {
     options.InputFormatters.Insert(0, BookonnectJPIF.GetJsonPatchInputFormatter());
 });
+
+// Configure core library
+builder.Services.AddBookonnectCore(builder.Configuration);
 
 builder.Services.AddScoped<ITokenLibrary, TokenLibrary>();
 builder.Services.AddScoped<IMailLibrary, MailLibrary>();
