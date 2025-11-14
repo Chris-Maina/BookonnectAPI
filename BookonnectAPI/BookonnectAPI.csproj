@@ -52,4 +52,7 @@
     <Folder Include="Migrations\" />
     <Folder Include="DTO\" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\BookonnectCore\BookonnectCore.csproj" />
+  </ItemGroup>
 </Project>
