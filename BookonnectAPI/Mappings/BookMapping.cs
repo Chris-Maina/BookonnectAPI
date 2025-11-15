@@ -17,5 +17,18 @@ namespace BookonnectAPI.Mappings
         ThumbnailUrl = book.ThumbnailUrl
       };
     }
+
+    public static Book ToEntity(this BookDTO bookDTO)
+    {
+      return new Book
+      {
+        Title = bookDTO.Title,
+        Authors = bookDTO.Authors,
+        ISBN13 = bookDTO.ISBN13,
+        PublishedYear = bookDTO.PublishedYear,
+        Description = bookDTO.Description,
+        ThumbnailUrl = bookDTO.ThumbnailUrl
+      };
+    }
   }
 }
