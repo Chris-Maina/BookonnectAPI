@@ -26,7 +26,6 @@ namespace BookonnectAPI.Controllers.V2
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
-    [ProducesResponseType(StatusCodes.Status499ClientClosedRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<BookDTO>> GetBookByIdAsync(string ISBN13)
     {
@@ -45,11 +44,6 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Invalid ISBN13: {ISBN13}", ISBN13);
         return BadRequest(new { Message = "ISBN13 cannot be null or empty." });
       }
-      catch (KeyNotFoundException ex)
-      {
-        _logger.LogError(ex, "Book not found: {Message}", ex.Message);
-        return NotFound(new { Message = ex.Message });
-      }
       catch (InvalidOperationException ex)
       {
         _logger.LogError(ex, "Database operation failed while fetching book with ISBN13: {ISBN13}", ISBN13);
@@ -60,18 +54,11 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Database operation timeout while fetching book with ISBN13: {ISBN13}", ISBN13);
         return StatusCode(408, new { Message = "The request timed out. Please try again later." });
       }
-      catch (OperationCanceledException ex)
-      {
-        _logger.LogError(ex, "Request was canceled while fetching book with ISBN13: {ISBN13}", ISBN13);
-        return StatusCode(499, new { Message = "The request was canceled. Please try again." });
-      }
-
       catch (Exception ex)
       {
-        _logger.LogError(ex, "An error occurred while fetching the book");
+        _logger.LogError(ex, "An unexpected error occurred while fetching book with ISBN13: {ISBN13}", ISBN13);
         return StatusCode(500, new { Message = "An unexpected error occurred. Please try again later." });
       }
-     
     }
 
     [HttpGet]
@@ -102,11 +89,6 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Request timed out while retrieving books");
         return StatusCode(408, new { Message = "The request timed out. Please try again later." });
       }
-      catch (OperationCanceledException ex)
-      {
-        _logger.LogError(ex, "Request was canceled while retrieving books");
-        return StatusCode(499, new { Message = "The request was canceled. Please try again." });
-      }
       catch (Exception ex)
       {
         _logger.LogError(ex, "An unexpected error occurred while retrieving books");
@@ -118,6 +100,8 @@ namespace BookonnectAPI.Controllers.V2
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<BookDTO>>> SearchBooksAsync([FromQuery] Models.SearchQueryParameters queryParameters)
     {
       try
@@ -150,11 +134,6 @@ namespace BookonnectAPI.Controllers.V2
       {
         _logger.LogError(ex, "Request timed out while searching books");
         return StatusCode(408, new { Message = "The request timed out. Please try again later." });
-      }
-      catch (OperationCanceledException ex)
-      {
-        _logger.LogError(ex, "Request was canceled while searching books");
-        return StatusCode(499, new { Message = "The request was canceled. Please try again." });
       }
       catch (Exception ex)
       {
