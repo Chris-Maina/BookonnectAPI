@@ -1,7 +1,5 @@
-using BookonnectAPI.Data;
 using BookonnectAPI.DTO;
 using BookonnectAPI.Mappings;
-using BookonnectCore.Models;
 using BookonnectCore.Services;
 using BookonnectCore.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -10,14 +8,12 @@ namespace BookonnectAPI.Services
 {
   public class BookApiService : BookService, IBookApiService
   {
-    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<BookApiService> _logger;
     private readonly IRelationalOperationsService _relationalOperationsService;
 
     public BookApiService(IServiceScopeFactory serviceScopeFactory, ILogger<BookApiService> logger, IRelationalOperationsService relationalOperationsService)
     : base(serviceScopeFactory, logger, relationalOperationsService)
     {
-      _serviceScopeFactory = serviceScopeFactory;
       _logger = logger;
       _relationalOperationsService = relationalOperationsService;
     }
@@ -44,7 +40,7 @@ namespace BookonnectAPI.Services
         throw new ArgumentException("Page size cannot exceed 1000", nameof(queryParameters));
       }
 
-      return _relationalOperationsService.SafeDatabaseReadAsync
+      var books = await _relationalOperationsService.SafeDatabaseReadAsync
       (
         async dbContext =>
         {
@@ -60,6 +56,9 @@ namespace BookonnectAPI.Services
         },
         nameof(GetAllBooksWithPaginationAsync)
       );
+      _logger.LogInformation("Successfully fetched {Count} books", books.Count());
+
+      return books;
     }
 
     public async Task<IEnumerable<BookDTO>> SearchBooksAsync(string query)
@@ -73,8 +72,7 @@ namespace BookonnectAPI.Services
       // Set a reasonable safety limit to prevent memory issues
       const int MAX_RESULTS = 5000;
       var searchTermLower = query.ToLower();
-
-      return _relationalOperationsService.SafeDatabaseReadAsync
+      var books = await _relationalOperationsService.SafeDatabaseReadAsync
       (
         async dbContext => await dbContext.Books
           .AsNoTracking() // Improves performance by disabling change tracking. We only need to read data.
@@ -88,6 +86,10 @@ namespace BookonnectAPI.Services
           .ToListAsync(),
           nameof(SearchBooksAsync)
       );
+
+      _logger.LogInformation("Found {Count} books matching query: {Query}", books.Count(), query);
+
+      return books;
     }
   }
 }

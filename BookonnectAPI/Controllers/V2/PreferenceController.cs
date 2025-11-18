@@ -74,7 +74,7 @@ namespace BookonnectAPI.Controllers.V2
       {
         _logger.LogInformation("Fetching your preferences");
         var userId = this.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
+        if (string.IsNullOrEmpty(userId))
         {
           return Unauthorized(new { Message = "Please sign in again." });
         }
