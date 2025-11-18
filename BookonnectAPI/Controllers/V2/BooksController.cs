@@ -1,11 +1,11 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using BookonnectAPI.Services;
-using BookonnectAPI.DTO;
-using BookonnectAPI.Mappings;
-
 namespace BookonnectAPI.Controllers.V2
 {
+  using Microsoft.AspNetCore.Authorization;
+  using Microsoft.AspNetCore.Mvc;
+  using BookonnectAPI.Services;
+  using BookonnectAPI.DTO;
+  using BookonnectAPI.Mappings;
+  
   [ApiController]
   [Authorize(Policy = "UserClaimPolicy")]
   [Route("api/v{version:apiVersion}/[controller]")]
