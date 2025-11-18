@@ -1,25 +1,37 @@
-using BookonnectAPI.Models;
-using BookonnectCore.Models;
-using BookonnectCore.Services.Interfaces;
-using Microsoft.AspNetCore.Mvc;
 
 namespace BookonnectAPI.Controllers.V2
 {
+  using BookonnectAPI.Models;
+  using BookonnectCore.Models;
+  using BookonnectCore.Services.Interfaces;
+  using Microsoft.AspNetCore.Authorization;
+  using Microsoft.AspNetCore.Mvc;
+
   [ApiController]
+  [Authorize(Policy = "UserClaimPolicy")]
   [Route("api/v2/[controller]")]
   // [Authorize(Roles = "Admin")]
   public class SyncController : ControllerBase
   {
     private readonly ILogger<SyncController> _logger;
     private readonly IDatabaseSyncService _databaseSyncService;
+    private readonly IRelationalOperationsService _relationalOperationsService;
+    private readonly IVectorOperationsService _vectorOperationsService;
 
-    public SyncController(ILogger<SyncController> logger, IDatabaseSyncService databaseSyncService)
+    public SyncController(ILogger<SyncController> logger, IDatabaseSyncService databaseSyncService, IRelationalOperationsService relationalOperationsService, IVectorOperationsService vectorOperationsService)
     {
       _logger = logger;
       _databaseSyncService = databaseSyncService;
+      _relationalOperationsService = relationalOperationsService;
+      _vectorOperationsService = vectorOperationsService;
     }
 
     [HttpPost("sync/csv")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
+    [ProducesResponseType(StatusCodes.Status499ClientClosedRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> SyncFromCsv([FromBody] CsvSyncRequest request)
     {
       if (!ModelState.IsValid)
@@ -29,6 +41,8 @@ namespace BookonnectAPI.Controllers.V2
       try
       {
         ArgumentNullException.ThrowIfNull(request.FilePath, nameof(request.FilePath));
+        await _relationalOperationsService.EnsureDatabaseInitializedAsync();
+        await _vectorOperationsService.InitializeAsync();
         await _databaseSyncService.SyncFromCsvAsync(request.FilePath);
         return Ok(new { Message = "CSV sync completed successfully" });
       }
@@ -36,6 +50,21 @@ namespace BookonnectAPI.Controllers.V2
       {
         _logger.LogError(ex, "Sync request data is null");
         return BadRequest(new { Message = "Sync request data cannot be null." });
+      }
+      catch (InvalidOperationException ex)
+      {
+        _logger.LogError(ex, "Database operation failed during CSV sync");
+        return StatusCode(500, new { Message = "CSV sync failed due to database operation error.", Error = ex.Message });
+      }
+      catch (TimeoutException ex)
+      {
+        _logger.LogError(ex, "Database operation timeout during CSV sync");
+        return StatusCode(408, new { Message = "Request timed out. Please try again later.", Error = ex.Message });
+      }
+      catch (OperationCanceledException ex)
+      {
+        _logger.LogError(ex, "CSV sync operation was canceled");
+        return StatusCode(499, new { Message = "CSV sync failed due to client timeout.", Error = ex.Message });
       }
       catch (Exception ex)
       {
@@ -45,6 +74,11 @@ namespace BookonnectAPI.Controllers.V2
     }
 
     [HttpPost("sync/full")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
+    [ProducesResponseType(StatusCodes.Status499ClientClosedRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> SyncDatabase()
     {
       if (!ModelState.IsValid)
@@ -53,8 +87,25 @@ namespace BookonnectAPI.Controllers.V2
       }
       try
       {
+        await _relationalOperationsService.EnsureDatabaseInitializedAsync();
+        await _vectorOperationsService.InitializeAsync();
         await _databaseSyncService.SyncRelationalToVectorDBAsync();
         return Ok(new { Message = "Full database sync completed successfully" });
+      }
+      catch (InvalidOperationException ex)
+      {
+        _logger.LogError(ex, "Database operation failed during full database sync");
+        return StatusCode(500, new { Message = "Full database sync failed due to database operation error.", Error = ex.Message });
+      }
+      catch (TimeoutException ex)
+      {
+        _logger.LogError(ex, "Database operation timeout during full database sync");
+        return StatusCode(408, new { Message = "Request timed out. Please try again later.", Error = ex.Message });
+      }
+      catch (OperationCanceledException ex)
+      {
+        _logger.LogError(ex, "Full database sync operation was canceled");
+        return StatusCode(499, new { Message = "Full database sync failed due to client timeout.", Error = ex.Message });
       }
       catch (Exception ex)
       {
@@ -64,15 +115,37 @@ namespace BookonnectAPI.Controllers.V2
     }
 
     [HttpGet("sync/status")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
+    [ProducesResponseType(StatusCodes.Status499ClientClosedRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<SyncStatus>> GetSyncStatus()
     {
       try
       {
+        await _relationalOperationsService.EnsureDatabaseInitializedAsync();
+        await _vectorOperationsService.InitializeAsync();
         var status = await _databaseSyncService.GetSyncStatusAsync();
         return Ok(status);
       }
+      catch (InvalidOperationException ex)
+      {
+        _logger.LogError(ex, "Database operation failed during sync status retrieval");
+        return StatusCode(500, new { Message = "Failed to retrieve sync status due to database operation error.", Error = ex.Message });
+      }
+      catch (TimeoutException ex)
+      {
+        _logger.LogError(ex, "Database operation timeout during sync status retrieval");
+        return StatusCode(408, new { Message = "Request timed out. Please try again later.", Error = ex.Message });
+      }
+      catch (OperationCanceledException ex)
+      {
+        _logger.LogError(ex, "Sync status retrieval operation was canceled");
+        return StatusCode(499, new { Message = "Failed to retrieve sync status due to client timeout.", Error = ex.Message });
+      }
       catch (Exception ex)
       {
+        _logger.LogError(ex, "An error occurred during sync status retrieval");
         return StatusCode(500, new { Message = "Failed to retrieve sync status.", Error = ex.Message });
       }
     }
