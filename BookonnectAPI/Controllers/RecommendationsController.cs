@@ -19,13 +19,15 @@ public class RecommendationsController : ControllerBase
     private readonly BookonnectContext _context;
     private readonly ILogger<Recommendation> _logger;
     private readonly IGeminiService _geminiService;
+    private readonly IChromaService _chromaService;
 
-    public RecommendationsController(BookonnectContext context, ILogger<Recommendation> logger, IGeminiService geminiService)
-    {
-        _context = context;
-        _logger = logger;
-        _geminiService = geminiService;
-    }
+    public RecommendationsController(BookonnectContext context, ILogger<Recommendation> logger, IGeminiService geminiService, IChromaService chromaService)
+  {
+    _context = context;
+    _logger = logger;
+    _geminiService = geminiService;
+    _chromaService = chromaService;
+  }
 
     // GET: api/Recommendations
     [HttpGet]
@@ -39,6 +41,41 @@ public class RecommendationsController : ControllerBase
             .ToListAsync();
 
         return Ok(recommendations);
+    }
+
+  [HttpGet("v2")]
+  public async Task<ActionResult<IEnumerable<BookDTO>>> GetRecommendationsV2()
+  {
+        _logger.LogInformation("Fetching recommendations v2");
+        int.TryParse(this.User.FindFirstValue(ClaimTypes.NameIdentifier), out int userId);
+
+        // Get user reviews/preferences
+        var preferences = await _context.Reviews
+            .Where(review => review.UserID == userId)
+            .Select(rev => Review.ReviewToDTO(rev))
+            .ToListAsync();
+        
+        if (preferences == null || preferences.Count == 0)
+        {
+            _logger.LogInformation("User does not have reviews");
+            return NotFound(new { Message = "Please add at least 3 book preferences" });
+        }
+
+        // get user profile vector embedding
+        var userProfileVector = await _chromaService.CalculateUserProfileVectorEmbeddingAsync(preferences);
+
+        // query similar books based on user profile vector
+        var excludeBookIds = preferences.Select(p => p.BookID).ToList();
+        var similarBookIds = await _chromaService.QuerySimilarBooksAsync(userProfileVector, limit: 5, excludeBookIds);
+
+        // Hydrate full book details from relational DB
+        var recommendedBooks = await _context.Books
+            .Where(b => similarBookIds.Contains(b.ID))
+            .Select(b => Book.BookToDTO(b))
+            .Include(b => b.Image)
+            .ToListAsync();
+
+        return Ok(recommendedBooks);
     }
 
     // GET: api/Recommendations/5
