@@ -10,11 +10,11 @@ namespace BookonnectAPI.Lib;
 public class TokenLibrary: ITokenLibrary
 {
 
-    private readonly JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
+  private readonly JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
 	public DateTime Expires { get; } = DateTime.UtcNow.AddDays(1);
 	private readonly JWTOptions _jwtOptions;
 
-    public TokenLibrary(IOptionsSnapshot<JWTOptions> jwtOptions)
+  public TokenLibrary(IOptionsSnapshot<JWTOptions> jwtOptions)
 	{
 		_jwtOptions = jwtOptions.Value;
 	}
@@ -34,8 +34,8 @@ public class TokenLibrary: ITokenLibrary
 
 		try
 		{
-            return tokenHandler.WriteToken(token);
-        }
+      return tokenHandler.WriteToken(token);
+    }
 		catch (Exception)
 		{
 			throw;
