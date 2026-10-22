@@ -11,8 +11,8 @@ namespace BookonnectAPI.Services
     private readonly ILogger<BookApiService> _logger;
     private readonly IRelationalOperationsService _relationalOperationsService;
 
-    public BookApiService(IServiceScopeFactory serviceScopeFactory, ILogger<BookApiService> logger, IRelationalOperationsService relationalOperationsService)
-    : base(serviceScopeFactory, logger, relationalOperationsService)
+    public BookApiService(ILogger<BookApiService> logger, IRelationalOperationsService relationalOperationsService)
+    : base(logger, relationalOperationsService)
     {
       _logger = logger;
       _relationalOperationsService = relationalOperationsService;
