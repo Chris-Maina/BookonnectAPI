@@ -3,6 +3,7 @@ using BookonnectAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using BookonnectAPI.Lib;
+using BookonnectAPI.Services;
 using BookonnectAPI.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -41,6 +42,7 @@ builder.Services.AddControllers(options =>
 // Configure core library
 builder.Services.AddBookonnectCore(builder.Configuration);
 
+builder.Services.AddScoped<IBookApiService, BookApiService>();
 builder.Services.AddScoped<ITokenLibrary, TokenLibrary>();
 builder.Services.AddScoped<IMailLibrary, MailLibrary>();
 
