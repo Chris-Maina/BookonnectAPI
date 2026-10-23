@@ -51,6 +51,22 @@ builder.Services.AddScoped<IBookApiService, BookApiService>();
 builder.Services.AddScoped<ITokenLibrary, TokenLibrary>();
 builder.Services.AddScoped<IMailLibrary, MailLibrary>();
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddDbContext<BookonnectContext>(options =>
+        options.UseSqlite("Data Source=./Data/Bookonnect.db"));
+}
+else
+{
+    var connectionString = builder.Configuration
+        .GetConnectionString("AZURE_MYSQL_CONNECTIONSTRING")
+        ?? throw new InvalidOperationException(
+            "API MySQL connection string is not configured.");
+
+    builder.Services.AddDbContext<BookonnectContext>(options =>
+        options.UseMySQL(connectionString));
+}
+
 JWTOptions? jWTOptions = new JWTOptions();
 jWTOptions = builder.Configuration.GetSection(JWTOptions.SectionName).Get<JWTOptions>();
 // CORS policy
