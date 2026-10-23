@@ -34,6 +34,11 @@ builder.Services.AddApiVersioning(opt =>
     opt.ReportApiVersions = true; // Include version info in response headers
     opt.ApiVersionReader = new UrlSegmentApiVersionReader();
 });
+builder.Services.AddVersionedApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
 builder.Services.AddControllers(options =>
 {
     options.InputFormatters.Insert(0, BookonnectJPIF.GetJsonPatchInputFormatter());
@@ -99,6 +104,18 @@ builder.Services.AddHttpClient<IGeminiService, GeminiService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    c.CustomSchemaIds(type => type.FullName);
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Bookonnect API",
+        Version = "v1"
+    });
+    c.SwaggerDoc("v2", new OpenApiInfo
+    {
+        Title = "Bookonnect API",
+        Version = "v2"
+    });
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http,
@@ -126,7 +143,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Bookonnect API v1");
+        options.SwaggerEndpoint("/swagger/v2/swagger.json", "Bookonnect API v2");
+    });
 }
 
 app.UseAuthentication();
