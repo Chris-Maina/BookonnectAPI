@@ -2,7 +2,6 @@
 namespace BookonnectAPI.Controllers.V2
 {
   using BookonnectAPI.Models;
-  using BookonnectAPI.Filters;
   using BookonnectCore.Models;
   using BookonnectCore.Services.Interfaces;
   using Microsoft.AspNetCore.Authorization;
@@ -47,30 +46,10 @@ namespace BookonnectAPI.Controllers.V2
         await _databaseSyncService.SyncFromCsvAsync(request.FilePath);
         return Ok(new { Message = "CSV sync completed successfully" });
       }
-      catch (ArgumentNullException ex)
-      {
-        _logger.LogError(ex, "Sync request data is null");
-        return BadRequest(new { Message = "Sync request data cannot be null." });
-      }
-      catch (InvalidOperationException ex)
-      {
-        _logger.LogError(ex, "Database operation failed during CSV sync");
-        return StatusCode(500, new { Message = "CSV sync failed due to database operation error.", Error = ex.Message });
-      }
-      catch (TimeoutException ex)
-      {
-        _logger.LogError(ex, "Database operation timeout during CSV sync");
-        return StatusCode(408, new { Message = "Request timed out. Please try again later.", Error = ex.Message });
-      }
       catch (OperationCanceledException ex)
       {
         _logger.LogError(ex, "CSV sync operation was canceled");
         return StatusCode(499, new { Message = "CSV sync failed due to client timeout.", Error = ex.Message });
-      }
-      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
-      {
-        _logger.LogError(ex, "An error occurred while syncing CSV data");
-        return StatusCode(500, new { Message = "CSV sync failed.", Error = ex.Message });
       }
     }
 
@@ -93,25 +72,10 @@ namespace BookonnectAPI.Controllers.V2
         await _databaseSyncService.SyncRelationalToVectorDBAsync();
         return Ok(new { Message = "Full database sync completed successfully" });
       }
-      catch (InvalidOperationException ex)
-      {
-        _logger.LogError(ex, "Database operation failed during full database sync");
-        return StatusCode(500, new { Message = "Full database sync failed due to database operation error.", Error = ex.Message });
-      }
-      catch (TimeoutException ex)
-      {
-        _logger.LogError(ex, "Database operation timeout during full database sync");
-        return StatusCode(408, new { Message = "Request timed out. Please try again later.", Error = ex.Message });
-      }
       catch (OperationCanceledException ex)
       {
         _logger.LogError(ex, "Full database sync operation was canceled");
         return StatusCode(499, new { Message = "Full database sync failed due to client timeout.", Error = ex.Message });
-      }
-      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
-      {
-        _logger.LogError(ex, "An error occurred during full database sync");
-        return StatusCode(500, new { Message = "Full database sync failed.", Error = ex.Message });
       }
     }
 
@@ -129,25 +93,10 @@ namespace BookonnectAPI.Controllers.V2
         var status = await _databaseSyncService.GetSyncStatusAsync();
         return Ok(status);
       }
-      catch (InvalidOperationException ex)
-      {
-        _logger.LogError(ex, "Database operation failed during sync status retrieval");
-        return StatusCode(500, new { Message = "Failed to retrieve sync status due to database operation error.", Error = ex.Message });
-      }
-      catch (TimeoutException ex)
-      {
-        _logger.LogError(ex, "Database operation timeout during sync status retrieval");
-        return StatusCode(408, new { Message = "Request timed out. Please try again later.", Error = ex.Message });
-      }
       catch (OperationCanceledException ex)
       {
         _logger.LogError(ex, "Sync status retrieval operation was canceled");
         return StatusCode(499, new { Message = "Failed to retrieve sync status due to client timeout.", Error = ex.Message });
-      }
-      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
-      {
-        _logger.LogError(ex, "An error occurred during sync status retrieval");
-        return StatusCode(500, new { Message = "Failed to retrieve sync status.", Error = ex.Message });
       }
     }
   }
