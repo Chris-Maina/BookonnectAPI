@@ -4,6 +4,7 @@ namespace BookonnectAPI.Controllers.V2
   using BookonnectCore.Services.Interfaces;
   using BookonnectAPI.DTO;
   using BookonnectAPI.Mappings;
+  using BookonnectAPI.Filters;
   using Microsoft.AspNetCore.Authorization;
   using System.Security.Claims;
 
@@ -24,6 +25,7 @@ namespace BookonnectAPI.Controllers.V2
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreatePreference([FromBody] PreferenceDTO preferenceDTO)
     {
       try
@@ -55,7 +57,7 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Database operation timeout while creating preference");
         return StatusCode(408, new { Message = "The request timed out. Please try again later.", Error = ex.Message });
       }
-      catch (Exception ex)
+      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
       {
         _logger.LogError(ex, "An unexpected error occurred while creating preference");
         return StatusCode(500, new { Message = "An unexpected error occurred. Please try again later." });
@@ -100,7 +102,7 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Database operation timeout while fetching preferences");
         return StatusCode(408, new { Message = "The request timed out. Please try again later.", Error = ex.Message });
       }
-      catch (Exception ex)
+      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
       {
         _logger.LogError(ex, "An unexpected error occurred while fetching preferences");
         return StatusCode(500, new { Message = "An unexpected error occurred. Please try again later." });
@@ -109,6 +111,7 @@ namespace BookonnectAPI.Controllers.V2
 
     [HttpGet("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -138,7 +141,7 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Database operation timeout while fetching preference with ID: {Id}", id);
         return StatusCode(408, new { Message = "The request timed out. Please try again later.", Error = ex.Message });
       }
-      catch (Exception ex)
+      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
       {
         _logger.LogError(ex, "An unexpected error occurred while fetching preference");
         return StatusCode(500, new { Message = "An unexpected error occurred. Please try again later." });

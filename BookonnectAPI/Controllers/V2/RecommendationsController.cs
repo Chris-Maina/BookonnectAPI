@@ -4,6 +4,7 @@ namespace BookonnectAPI.Controllers.V2
   using BookonnectAPI.Services;
   using Microsoft.AspNetCore.Mvc;
   using BookonnectAPI.DTO;
+  using BookonnectAPI.Filters;
   using Microsoft.AspNetCore.Authorization;
   using System.Security.Claims;
 
@@ -57,7 +58,7 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Database operation timeout while fetching recommended books");
         return StatusCode(408, new { Message = "The request timed out. Please try again later.", Error = ex.Message });
       }
-      catch (Exception ex)
+      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
       {
         _logger.LogError(ex, "Unexpected error while fetching recommended books");
         return StatusCode(500, new { Message = "An unexpected error occurred while fetching recommended books." });
@@ -94,7 +95,7 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Database operation timeout while fetching similar books for ISBN13: {ISBN13}", isbn13);
         return StatusCode(408, new { Message = "The request timed out. Please try again later.", Error = ex.Message });
       }
-      catch (Exception ex)
+      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
       {
         _logger.LogError(ex, "Unexpected error while fetching similar books for ISBN13: {ISBN13}", isbn13);
         return StatusCode(500, new { Message = "An unexpected error occurred while fetching similar books." });

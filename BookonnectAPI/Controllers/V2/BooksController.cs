@@ -5,6 +5,7 @@ namespace BookonnectAPI.Controllers.V2
   using BookonnectAPI.Services;
   using BookonnectAPI.DTO;
   using BookonnectAPI.Mappings;
+  using BookonnectAPI.Filters;
   
   [ApiController]
   [Authorize(Policy = "UserClaimPolicy")]
@@ -54,7 +55,7 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Database operation timeout while fetching book with ISBN13: {ISBN13}", ISBN13);
         return StatusCode(408, new { Message = "The request timed out. Please try again later." });
       }
-      catch (Exception ex)
+      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
       {
         _logger.LogError(ex, "An unexpected error occurred while fetching book with ISBN13: {ISBN13}", ISBN13);
         return StatusCode(500, new { Message = "An unexpected error occurred. Please try again later." });
@@ -89,7 +90,7 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Request timed out while retrieving books");
         return StatusCode(408, new { Message = "The request timed out. Please try again later." });
       }
-      catch (Exception ex)
+      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
       {
         _logger.LogError(ex, "An unexpected error occurred while retrieving books");
         return StatusCode(500, new { Message = "An unexpected error occurred. Please try again later." });
@@ -135,7 +136,7 @@ namespace BookonnectAPI.Controllers.V2
         _logger.LogError(ex, "Request timed out while searching books");
         return StatusCode(408, new { Message = "The request timed out. Please try again later." });
       }
-      catch (Exception ex)
+      catch (Exception ex) when (!CoreExceptionFilter.CanHandle(ex))
       {
         _logger.LogError(ex, "An unexpected error occurred while searching books");
         return StatusCode(500, new { Message = "An unexpected error occurred. Please try again later." });

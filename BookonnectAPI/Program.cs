@@ -13,6 +13,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using BookonnectCore.Extensions;
+using BookonnectAPI.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +42,7 @@ builder.Services.AddVersionedApiExplorer(options =>
 });
 builder.Services.AddControllers(options =>
 {
+    options.Filters.Add<CoreExceptionFilter>();
     options.InputFormatters.Insert(0, BookonnectJPIF.GetJsonPatchInputFormatter());
 });
 
