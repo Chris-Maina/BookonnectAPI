@@ -1,4 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using BookonnectAPI.Configuration;
@@ -19,27 +20,24 @@ public class TokenLibrary: ITokenLibrary
 		_jwtOptions = jwtOptions.Value;
 	}
 
-	public string GetToken(int userId)
+	public string GetToken(int userId, bool isV2User = false)
 	{
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(userId);
 		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
 		var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 		var issuer = _jwtOptions.Issuer;
 		var audience = _jwtOptions.Audience;
-		var claims = new[]
+		var claims = new List<Claim>
 		{
-			new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+			new Claim(JwtRegisteredClaimNames.Sub, userId.ToString(CultureInfo.InvariantCulture)),
 		};
+		if (isV2User)
+		{
+			claims.Add(new Claim(V2Authentication.IdentityStoreClaim, V2Authentication.IdentityStore));
+		}
 
 		var token = new JwtSecurityToken(issuer, audience, claims, expires: Expires, signingCredentials: credentials);
 
-		try
-		{
-      return tokenHandler.WriteToken(token);
-    }
-		catch (Exception)
-		{
-			throw;
-		}	
+		return tokenHandler.WriteToken(token);
 	}
 }
-
