@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
 using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
@@ -20,7 +19,6 @@ public class AuthController: ControllerBase
 	private readonly ITokenLibrary _tokenLibrary;
 	private readonly ILogger<AuthController> _logger;
 	private readonly IMailLibrary _mailLibrary;
-	private readonly GoogleOptions _options;
 	private readonly IGoogleTokenValidator _googleTokenValidator;
 
 	public AuthController(BookonnectContext context, ITokenLibrary tokenLibrary, ILogger<AuthController> logger, IMailLibrary mailLibrary, IGoogleTokenValidator googleTokenValidator)
