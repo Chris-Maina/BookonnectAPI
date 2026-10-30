@@ -1,5 +1,16 @@
 # Database file
 Bookonnect.db
+Bookonnect.db-shm
+Bookonnect.db-wal
+Bookonnect.db-journal
+
+# Local configuration and secrets
+/.mcp.json
+.env*
+!.env.example
+!.env.sample
+!.env.template
+secrets.json
 
 # globs
 Makefile.in

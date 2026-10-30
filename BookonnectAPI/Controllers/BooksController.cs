@@ -2,7 +2,6 @@
 using System.Text.Json;
 using BookonnectAPI.Configuration;
 using BookonnectAPI.Data;
-using BookonnectAPI.DTO;
 using BookonnectAPI.Lib;
 using BookonnectAPI.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +17,7 @@ namespace BookonnectAPI.Controllers;
 [Authorize(Policy = "UserClaimPolicy")]
 [Route("/api/v{version:apiVersion}/[controller]")]
 [ApiVersion("1.0")]
+[Obsolete("Use V2 BooksController instead")]
 public class BooksController: ControllerBase
 {
 	private readonly BookonnectContext _context;
@@ -35,13 +35,13 @@ public class BooksController: ControllerBase
         _geminiService = geminiService;
         _environment = environment;
     }
-
-	[HttpPost]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+  
+  [HttpPost]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  [ProducesResponseType(StatusCodes.Status409Conflict)]
+  [ProducesResponseType(StatusCodes.Status201Created)]
+  [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<BookDTO>> PostBook(BookDTO bookDTO)
 	{
         _logger.LogInformation("Posting a book");

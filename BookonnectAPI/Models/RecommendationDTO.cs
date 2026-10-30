@@ -1,6 +1,4 @@
-﻿using System;
-using BookonnectAPI.Models;
-namespace BookonnectAPI.DTO;
+﻿namespace BookonnectAPI.Models;
 
 public class RecommendationDTO
 {
