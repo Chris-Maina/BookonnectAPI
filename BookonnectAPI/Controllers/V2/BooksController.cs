@@ -5,9 +5,10 @@ namespace BookonnectAPI.Controllers.V2
   using BookonnectAPI.Services;
   using BookonnectAPI.DTO;
   using BookonnectAPI.Mappings;
+  using BookonnectAPI.Lib;
   
   [ApiController]
-  [Authorize(Policy = "UserClaimPolicy")]
+  [Authorize(Policy = V2Authentication.UserPolicy)]
   [Route("api/v{version:apiVersion}/[controller]")]
   [ApiVersion("2.0")]
   public class BooksController : ControllerBase

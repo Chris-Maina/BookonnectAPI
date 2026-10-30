@@ -4,11 +4,12 @@ namespace BookonnectAPI.Controllers.V2
   using BookonnectAPI.Services;
   using Microsoft.AspNetCore.Mvc;
   using BookonnectAPI.DTO;
+  using BookonnectAPI.Lib;
   using Microsoft.AspNetCore.Authorization;
   using System.Security.Claims;
 
   [ApiController]
-  [Authorize(Policy = "UserClaimPolicy")]
+  [Authorize(Policy = V2Authentication.UserPolicy)]
   [Route("api/v{version:apiVersion}/[controller]")]
   [ApiVersion("2.0")]
   public class RecommendationsController : ControllerBase

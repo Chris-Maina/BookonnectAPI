@@ -4,12 +4,14 @@ namespace BookonnectAPI.Controllers.V2
   using BookonnectCore.Services.Interfaces;
   using BookonnectAPI.DTO;
   using BookonnectAPI.Mappings;
+  using BookonnectAPI.Lib;
   using Microsoft.AspNetCore.Authorization;
   using System.Security.Claims;
 
   [ApiController]
-  [Authorize(Policy = "UserClaimPolicy")]
-  [Route("api/v2/[controller]")]
+  [Authorize(Policy = V2Authentication.UserPolicy)]
+  [Route("api/v{version:apiVersion}/[controller]")]
+  [ApiVersion("2.0")]
   public class PreferenceController : ControllerBase
   {
     private readonly IPreferenceService _preferenceService;
@@ -24,19 +26,29 @@ namespace BookonnectAPI.Controllers.V2
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreatePreference([FromBody] PreferenceDTO preferenceDTO)
     {
-      _logger.LogInformation("Creating a new preference for UserId: {UserId}, BookId: {BookId}",
-        preferenceDTO.UserId, preferenceDTO.BookId);
       if (preferenceDTO == null)
       {
         return BadRequest();
       }
 
+      var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+      if (preferenceDTO.UserId != userId)
+      {
+        return Forbid();
+      }
+
+      _logger.LogInformation("Creating a new preference for UserId: {UserId}, BookId: {BookId}",
+        userId, preferenceDTO.BookId);
       var preference = preferenceDTO.ToEntity();
+      preference.UserId = userId;
+      // Book details are read-only; do not persist a client-supplied book graph.
+      preference.Book = null!;
       await _preferenceService.AddPreferenceAsync(preference);
 
       return CreatedAtAction(nameof(GetPreference), new { id = preference.Id }, preference.ToDTO());
@@ -73,7 +85,8 @@ namespace BookonnectAPI.Controllers.V2
     public async Task<ActionResult<PreferenceDTO>> GetPreference(int id)
     {
       var preference = await _preferenceService.GetPreferenceByIdAsync(id);
-      if (preference == null)
+      if (preference == null ||
+          preference.UserId != int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!))
       {
         return NotFound();
       }
