@@ -1,4 +1,5 @@
 using BookonnectCore.Exceptions;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -28,6 +29,7 @@ public sealed class CoreExceptionFilter : IExceptionFilter
 
         var (statusCode, message) = context.Exception switch
         {
+            InvalidJwtException => (StatusCodes.Status401Unauthorized, "The Google ID token is invalid or expired."),
             NotFoundException => (StatusCodes.Status404NotFound, context.Exception.Message),
             AccountLinkRequiredException or AlreadyExistsException =>
                 (StatusCodes.Status409Conflict, context.Exception.Message),
