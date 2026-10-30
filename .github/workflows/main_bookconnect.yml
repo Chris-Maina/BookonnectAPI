@@ -24,8 +24,11 @@ jobs:
       - name: Build with dotnet
         run: dotnet build --configuration Release
 
+      - name: Test authentication and authorization
+        run: dotnet test --configuration Release --no-build
+
       - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish BookonnectAPI/BookonnectAPI.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: install dotnet ef
         run: dotnet tool install -g dotnet-ef --version 8.*
