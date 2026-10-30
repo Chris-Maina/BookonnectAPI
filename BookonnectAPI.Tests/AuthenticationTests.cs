@@ -42,12 +42,60 @@ public sealed class AuthenticationTests
         Assert.Equal("google-subject", factory.Accounts.LastIdentity?.Subject);
         Assert.Equal("reader@example.test", factory.Accounts.LastIdentity?.Email);
 
+        if (isNew)
+        {
+            var email = Assert.Single(factory.Mail.Emails);
+            Assert.Equal("reader@example.test", email.ToId);
+            Assert.Equal("Reader", email.Name);
+            Assert.Equal("You are one of US!", email.Subject);
+            Assert.Contains("Hello <b>Reader</b>", email.Body);
+            Assert.Contains("book recommendations based on your reading preferences", email.Body);
+            Assert.DoesNotContain("buy affordable or sell your books", email.Body);
+        }
+        else
+        {
+            Assert.Empty(factory.Mail.Emails);
+        }
+
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body.Token);
         using var profile = await client.GetAsync("/api/v2/Auth");
         Assert.Equal(HttpStatusCode.OK, profile.StatusCode);
         Assert.Equal("Reader", (await profile.Content.ReadFromJsonAsync<UserDTO>())?.Name);
         using var sync = await client.PostAsync("/api/v2/Sync/sync/full", null);
         Assert.Equal(HttpStatusCode.Forbidden, sync.StatusCode);
+    }
+
+    [Fact]
+    public async Task OnboardingMailFailuresDoNotPreventNewUsersFromSigningIn()
+    {
+        using var factory = new AuthApiFactory();
+        factory.Accounts.IsNewUser = true;
+        factory.Mail.Error = new InvalidOperationException("private mail server details");
+        using var client = factory.CreateClient();
+        using var response = await client.PostAsJsonAsync("/api/v2/Auth", new { IdToken = "token" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Single(factory.Mail.Emails);
+        var body = (await response.Content.ReadFromJsonAsync<UserToken>())!;
+        Assert.False(string.IsNullOrWhiteSpace(body.Token));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body.Token);
+        using var profile = await client.GetAsync("/api/v2/Auth");
+        Assert.Equal(HttpStatusCode.OK, profile.StatusCode);
+    }
+
+    [Fact]
+    public async Task OnboardingMailEncodesThePersistedUserName()
+    {
+        using var factory = new AuthApiFactory();
+        factory.Accounts.IsNewUser = true;
+        factory.Accounts.Users[1].Name = "<Reader & Co>";
+        using var client = factory.CreateClient();
+        using var response = await client.PostAsJsonAsync("/api/v2/Auth", new { IdToken = "token" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var email = Assert.Single(factory.Mail.Emails);
+        Assert.Contains("Hello <b>&lt;Reader &amp; Co&gt;</b>", email.Body);
+        Assert.Equal("<Reader & Co>", email.Name);
     }
 
     [Theory]

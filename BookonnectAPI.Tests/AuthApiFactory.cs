@@ -32,6 +32,7 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
     public FakeUserAccounts Accounts { get; } = new();
     public FakeGoogleTokenValidator Google { get; } = new();
     public FakePreferences Preferences { get; } = new();
+    public FakeMailLibrary Mail { get; } = new();
 
     public AuthApiFactory()
     {
@@ -73,11 +74,13 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IGoogleTokenValidator>();
             services.RemoveAll<IUserAccountService>();
             services.RemoveAll<IPreferenceService>();
+            services.RemoveAll<IMailLibrary>();
             services.RemoveAll<DbContextOptions<BookonnectContext>>();
             services.RemoveAll<BookonnectContext>();
             services.AddSingleton<IGoogleTokenValidator>(Google);
             services.AddSingleton<IUserAccountService>(Accounts);
             services.AddSingleton<IPreferenceService>(Preferences);
+            services.AddSingleton<IMailLibrary>(Mail);
             services.AddDbContext<BookonnectContext>(options => options.UseSqlite(_database));
             services.AddSingleton(CompletedService.Create<IDatabaseSyncService>());
             services.AddSingleton(CompletedService.Create<IRelationalOperationsService>());
@@ -114,6 +117,18 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
     {
         base.Dispose(disposing);
         if (disposing) _database.Dispose();
+    }
+}
+
+public sealed class FakeMailLibrary : IMailLibrary
+{
+    public List<BookonnectAPI.Models.Email> Emails { get; } = new();
+    public Exception? Error { get; set; }
+
+    public Task SendMail(BookonnectAPI.Models.Email email)
+    {
+        Emails.Add(email);
+        return Error == null ? Task.CompletedTask : Task.FromException(Error);
     }
 }
 

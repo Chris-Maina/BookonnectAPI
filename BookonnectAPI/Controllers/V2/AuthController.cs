@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Security.Claims;
 using BookonnectAPI.DTO;
 using BookonnectAPI.Lib;
@@ -20,15 +21,21 @@ public sealed class AuthController : ControllerBase
     private readonly IUserAccountService _userAccountService;
     private readonly IGoogleTokenValidator _googleTokenValidator;
     private readonly ITokenLibrary _tokenLibrary;
+    private readonly IMailLibrary _mailLibrary;
+    private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IUserAccountService userAccountService,
         IGoogleTokenValidator googleTokenValidator,
-        ITokenLibrary tokenLibrary)
+        ITokenLibrary tokenLibrary,
+        IMailLibrary mailLibrary,
+        ILogger<AuthController> logger)
     {
         _userAccountService = userAccountService;
         _googleTokenValidator = googleTokenValidator;
         _tokenLibrary = tokenLibrary;
+        _mailLibrary = mailLibrary;
+        _logger = logger;
     }
 
     [HttpPost]
@@ -56,6 +63,26 @@ public sealed class AuthController : ControllerBase
         var token = _tokenLibrary.GetToken(result.User.ID, isV2User: true)
             ?? throw new InvalidOperationException("Failed to issue an access token.");
         var response = result.User.ToTokenDTO(token, _tokenLibrary.Expires);
+
+        if (result.IsNewUser)
+        {
+            try
+            {
+                await _mailLibrary.SendMail(new Email
+                {
+                    Body = $@"<html><body>Hello <b>{WebUtility.HtmlEncode(result.User.Name)}</b>,<br />
+            <p>Thank you for joining the Bookonnect family! We'll share book recommendations based on your reading preferences.</p><br />
+            <p>Regards,<br /> Bookonnect Team.</p></body></html>",
+                    Subject = "You are one of US!",
+                    ToId = result.User.Email,
+                    Name = result.User.Name
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending onboarding email for user {UserId}", result.User.ID);
+            }
+        }
 
         return result.IsNewUser
             ? CreatedAtAction(nameof(GetAuthenticatedUser), response)
