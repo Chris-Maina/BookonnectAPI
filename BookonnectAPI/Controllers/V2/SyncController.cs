@@ -2,15 +2,16 @@
 namespace BookonnectAPI.Controllers.V2
 {
   using BookonnectAPI.Models;
+  using BookonnectAPI.Lib;
   using BookonnectCore.Models;
   using BookonnectCore.Services.Interfaces;
   using Microsoft.AspNetCore.Authorization;
   using Microsoft.AspNetCore.Mvc;
 
   [ApiController]
-  [Authorize(Policy = "UserClaimPolicy")]
-  [Route("api/v2/[controller]")]
-  // [Authorize(Roles = "Admin")]
+  [Authorize(Policy = V2Authentication.AdminPolicy)]
+  [Route("api/v{version:apiVersion}/[controller]")]
+  [ApiVersion("2.0")]
   public class SyncController : ControllerBase
   {
     private readonly ILogger<SyncController> _logger;
